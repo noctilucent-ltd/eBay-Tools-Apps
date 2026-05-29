@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>eBay Profit Calculator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      padding: 24px 16px;
+    }
+
+    .layout {
+      max-width: 1000px;
+      margin: 0 auto;
+      display: flex;
+      gap: 20px;
+      align-items: flex-start;
+    }
+
+    .main { flex: 1; min-width: 0; }
+
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+    }
+
+    h1 { font-size: 22px; font-weight: 700; color: #1a1a2e; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: #888; margin-bottom: 20px; }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #aaa;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 14px;
+    }
+
+    .field { margin-bottom: 14px; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 2px solid #e8e8e8;
+      border-radius: 9px;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+    input[type="number"] { font-family: 'Courier New', monospace; }
+    input[type="number"]:focus, input[type="text"]:focus { border-color: #4f46e5; }
+
+    .toggle-group { display: flex; gap: 8px; margin-bottom: 14px; }
+    .toggle-btn {
+      flex: 1;
+      padding: 9px;
+      border: 2px solid #e8e8e8;
+      border-radius: 9px;
+      background: white;
+      font-size: 13px;
+      font-weight: 600;
+      color: #888;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+    .toggle-btn.active { border-color: #4f46e5; background: #f0efff; color: #4f46e5; }
+    .toggle-btn.active.green { border-color: #38a169; background: #f0fff4; color: #38a169; }
+
+    .promo-rate { display: none; margin-bottom: 14px; }
+    .promo-rate.show { display: block; }
+
+    .results { display: none; }
+    .results.show { display: block; }
+
+    .profit-hero {
+      text-align: center;
+      padding: 20px 0 16px;
+      border-bottom: 2px solid #f5f5f5;
+      margin-bottom: 18px;
+    }
+    .profit-hero .label { font-size: 12px; color: #aaa; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .profit-hero .amount { font-size: 42px; font-weight: 800; margin: 4px 0; font-family: 'Courier New', monospace; }
+    .profit-hero .amount.positive { color: #38a169; }
+    .profit-hero .amount.negative { color: #e53e3e; }
+    .profit-hero .margin { font-size: 16px; font-weight: 700; color: #888; }
+
+    .breakdown-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #f8f8f8;
+      font-size: 13px;
+    }
+    .breakdown-row:last-child { border-bottom: none; }
+    .breakdown-row .name { color: #555; }
+    .breakdown-row .value { font-weight: 700; font-family: 'Courier New', monospace; }
+    .breakdown-row .value.neg { color: #e53e3e; }
+    .breakdown-row .value.pos { color: #38a169; }
+    .breakdown-row.total { border-top: 2px solid #e8e8e8; margin-top: 4px; padding-top: 12px; font-weight: 700; }
+
+    .min-price-card {
+      background: #f8f7ff;
+      border: 1.5px solid #e0ddff;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 16px;
+    }
+    .min-price-card .mpc-title { font-size: 11px; font-weight: 700; color: #7c6fcd; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .min-price-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; }
+    .min-price-row .mp-label { color: #666; }
+    .min-price-row .mp-val { font-weight: 700; font-family: 'Courier New', monospace; color: #4f46e5; cursor: pointer; }
+    .min-price-row .mp-val:hover { text-decoration: underline; }
+
+    .calc-btn {
+      width: 100%;
+      padding: 14px;
+      background: #4f46e5;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 4px;
+    }
+    .calc-btn:hover { background: #4338ca; }
+
+    .save-btn {
+      width: 100%;
+      padding: 11px;
+      background: white;
+      color: #38a169;
+      border: 2px solid #38a169;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 10px;
+    }
+    .save-btn:hover { background: #f0fff4; }
+
+    .fees-note { font-size: 11px; color: #bbb; text-align: center; margin-top: 10px; }
+    .divider { border: none; border-top: 2px solid #f0f0f0; margin: 16px 0; }
+
+    /* Save modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      width: 340px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.15);
+    }
+    .modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #1a1a2e; }
+    .modal-btns { display: flex; gap: 8px; margin-top: 16px; }
+    .modal-btns button { flex: 1; padding: 11px; border-radius: 9px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+    .btn-save-confirm { background: #38a169; color: white; }
+    .btn-save-confirm:hover { background: #2f855a; }
+    .btn-cancel { background: #f5f5f5; color: #666; }
+    .btn-cancel:hover { background: #ececec; }
+
+    /* Sidebar */
+    .sidebar-card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 20px; }
+    .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .sidebar-header h3 { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+    .sidebar-header button { font-size: 11px; color: #aaa; background: none; border: none; cursor: pointer; font-weight: 600; }
+    .sidebar-header button:hover { color: #e53e3e; }
+
+    .saved-empty { font-size: 12px; color: #bbb; text-align: center; padding: 20px 0; }
+
+    .saved-item {
+      border: 1.5px solid #f0f0f0;
+      border-radius: 10px;
+      padding: 11px 12px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      position: relative;
+    }
+    .saved-item:hover { border-color: #4f46e5; background: #f8f7ff; }
+    .saved-item .si-name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 3px; padding-right: 20px; }
+    .saved-item .si-meta { font-size: 11px; color: #aaa; }
+    .saved-item .si-meta span { margin-right: 8px; }
+    .saved-item .si-delete {
+      position: absolute;
+      top: 8px; right: 8px;
+      font-size: 14px;
+      color: #ddd;
+      cursor: pointer;
+      line-height: 1;
+      background: none;
+      border: none;
+      padding: 2px;
+    }
+    .saved-item .si-delete:hover { color: #e53e3e; }
+
+    @media (max-width: 700px) {
+      .layout { flex-direction: column-reverse; }
+      .sidebar { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- MAIN CALCULATOR -->
+  <div class="main">
+    <h1>🛒 eBay Profit Calculator</h1>
+    <p class="subtitle">Thai importing business — Health &amp; Beauty</p>
+
+    <div class="card">
+      <div class="section-title">Prices</div>
+
+      <div class="field">
+        <label>Selling price (£)</label>
+        <input type="number" id="sellingPrice" placeholder="0.00" step="0.01" min="0" oninput="calculate()" />
+      </div>
+
+      <div class="field">
+        <label>Landed cost — CoG + freight (£)</label>
+        <input type="number" id="landedCost" placeholder="0.00" step="0.01" min="0" oninput="calculate()" />
+      </div>
+
+      <hr class="divider">
+      <div class="section-title">Postage &amp; Packing</div>
+
+      <div class="field">
+        <label>Postage cost (£) <span style="font-weight:400;color:#bbb">— RM / Evri standard parcel</span></label>
+        <input type="number" id="postageCost" value="3.10" step="0.01" min="0" oninput="calculate()" />
+      </div>
+
+      <label style="margin-bottom:8px">Packing</label>
+      <div class="toggle-group">
+        <div class="toggle-btn active green" id="btn-home" onclick="setPacking('home')">🏠 Home (free)</div>
+        <div class="toggle-btn" id="btn-prep" onclick="setPacking('prep')">📦 Prep Centre (£1.50)</div>
+      </div>
+
+      <hr class="divider">
+      <div class="section-title">Seller Account</div>
+
+      <label style="margin-bottom:8px">Seller type</label>
+      <div class="toggle-group">
+        <div class="toggle-btn active" id="btn-ltd" onclick="setSeller('ltd')">🏢 LTD Business</div>
+        <div class="toggle-btn" id="btn-personal" onclick="setSeller('personal')">👤 Personal</div>
+      </div>
+
+      <label style="margin-bottom:8px">Promoted Listings</label>
+      <div class="toggle-group">
+        <div class="toggle-btn" id="btn-promo-no" onclick="setPromo(false)">❌ No</div>
+        <div class="toggle-btn active" id="btn-promo-yes" onclick="setPromo(true)">📢 Yes</div>
+      </div>
+
+      <div class="promo-rate show" id="promoRateField">
+        <label>Promoted listings rate (%)</label>
+        <input type="number" id="promoRate" value="5" step="0.5" min="0" max="20" oninput="calculate()" />
+      </div>
+
+      <button class="calc-btn" onclick="calculate()">Calculate Profit</button>
+      <button class="save-btn" onclick="openSaveModal()">💾 Save this product</button>
+      <div class="fees-note" id="feesNote">eBay fees: 10.9% + 0.35% + £0.40 fixed + 20% VAT</div>
+    </div>
+
+    <!-- RESULTS -->
+    <div class="card results" id="resultsCard">
+      <div class="profit-hero">
+        <div class="label">Net Profit</div>
+        <div class="amount" id="heroProfit">£0.00</div>
+        <div class="margin" id="heroMargin">0% margin</div>
+      </div>
+
+      <div class="breakdown" id="breakdown"></div>
+
+      <div class="min-price-card">
+        <div class="mpc-title">Minimum selling price for target margin <span style="font-weight:400;font-style:italic">(click to use)</span></div>
+        <div class="min-price-row"><span class="mp-label">Break even (0%)</span><span class="mp-val" id="mp0" onclick="usePrice('mp0')">—</span></div>
+        <div class="min-price-row"><span class="mp-label">10% margin</span><span class="mp-val" id="mp10" onclick="usePrice('mp10')">—</span></div>
+        <div class="min-price-row"><span class="mp-label">20% margin</span><span class="mp-val" id="mp20" onclick="usePrice('mp20')">—</span></div>
+        <div class="min-price-row"><span class="mp-label">30% margin</span><span class="mp-val" id="mp30" onclick="usePrice('mp30')">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR: SAVED PRODUCTS -->
+  <div class="sidebar">
+    <div class="sidebar-card">
+      <div class="sidebar-header">
+        <h3>💾 Saved products</h3>
+        <button onclick="clearAllSaved()">Clear all</button>
+      </div>
+      <div id="savedList"><div class="saved-empty">No saved products yet.<br>Fill in the calculator and click<br>"Save this product".</div></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- SAVE MODAL -->
+<div class="modal-overlay" id="saveModal">
+  <div class="modal">
+    <h3>💾 Save product</h3>
+    <div class="field">
+      <label>Product name</label>
+      <input type="text" id="saveProductName" placeholder="e.g. Kwan Loong Oil 57ml" />
+    </div>
+    <div class="field">
+      <label>Notes <span style="font-weight:400;color:#bbb">(optional)</span></label>
+      <input type="text" id="saveProductNotes" placeholder="e.g. sells well, 3-pack" />
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeSaveModal()">Cancel</button>
+      <button class="btn-save-confirm" onclick="confirmSave()">Save product</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  let packingType  = 'home';
+  let sellerType   = 'ltd';
+  let promoEnabled = true;
+
+  function setPacking(type) {
+    packingType = type;
+    document.getElementById('btn-home').classList.toggle('active', type === 'home');
+    document.getElementById('btn-home').classList.toggle('green',  type === 'home');
+    document.getElementById('btn-prep').classList.toggle('active', type === 'prep');
+    document.getElementById('btn-prep').classList.toggle('green',  type === 'prep');
+    calculate();
+  }
+
+  function setSeller(type) {
+    sellerType = type;
+    document.getElementById('btn-ltd').classList.toggle('active',      type === 'ltd');
+    document.getElementById('btn-personal').classList.toggle('active', type === 'personal');
+    document.getElementById('feesNote').textContent = type === 'ltd'
+      ? 'eBay fees: 10.9% + 0.35% + £0.40 fixed + 20% VAT'
+      : 'Personal account — no eBay selling fees';
+    calculate();
+  }
+
+  function setPromo(enabled) {
+    promoEnabled = enabled;
+    document.getElementById('btn-promo-yes').classList.toggle('active', enabled);
+    document.getElementById('btn-promo-no').classList.toggle('active',  !enabled);
+    document.getElementById('promoRateField').classList.toggle('show',   enabled);
+    calculate();
+  }
+
+  function fmt(n) {
+    return (n >= 0 ? '£' : '-£') + Math.abs(n).toFixed(2);
+  }
+
+  function calculate() {
+    const selling   = parseFloat(document.getElementById('sellingPrice').value) || 0;
+    const landed    = parseFloat(document.getElementById('landedCost').value)   || 0;
+    const postage   = parseFloat(document.getElementById('postageCost').value)  || 0;
+    const promoRate = parseFloat(document.getElementById('promoRate').value)    || 0;
+    const packCost  = packingType === 'prep' ? 1.50 : 0;
+
+    let ebayFees = 0, promoFee = 0;
+    if (sellerType === 'ltd') {
+      const fvf      = selling * 0.109;
+      const regFee   = selling * 0.0035;
+      const fixedFee = selling > 10 ? 0.40 : 0;
+      ebayFees       = (fvf + regFee + fixedFee) * 1.20;
+      if (promoEnabled) promoFee = selling * (promoRate / 100) * 1.20;
+    }
+
+    const totalCosts = landed + postage + packCost + ebayFees + promoFee;
+    const profit     = selling - totalCosts;
+    const margin     = selling > 0 ? (profit / selling) * 100 : 0;
+
+    const heroEl = document.getElementById('heroProfit');
+    heroEl.textContent = fmt(profit);
+    heroEl.className   = 'amount ' + (profit >= 0 ? 'positive' : 'negative');
+    document.getElementById('heroMargin').textContent = margin.toFixed(1) + '% margin';
+
+    const rows = [
+      { name: '💰 Selling price',      value: selling,  cls: 'pos' },
+      { name: '📦 Landed cost',         value: -landed,  cls: 'neg' },
+      { name: '🚚 Postage (RM/Evri)',   value: -postage, cls: 'neg' },
+    ];
+    if (packCost  > 0) rows.push({ name: '🏭 Prep centre packing',               value: -packCost,  cls: 'neg' });
+    if (ebayFees  > 0) rows.push({ name: '🏷️ eBay fees (inc VAT)',               value: -ebayFees,  cls: 'neg' });
+    if (promoFee  > 0) rows.push({ name: `📢 Promoted listings (${promoRate}%)`, value: -promoFee,  cls: 'neg' });
+    rows.push({ name: '✅ Net profit', value: profit, cls: profit >= 0 ? 'pos' : 'neg', total: true });
+
+    document.getElementById('breakdown').innerHTML = rows.map(r => `
+      <div class="breakdown-row ${r.total ? 'total' : ''}">
+        <span class="name">${r.name}</span>
+        <span class="value ${r.cls}">${fmt(r.value)}</span>
+      </div>`).join('');
+
+    [0, 10, 20, 30].forEach(pct => {
+      const mp = solveMinPrice(landed, postage, packCost, promoEnabled ? promoRate : 0, pct);
+      document.getElementById(`mp${pct}`).textContent = fmt(mp);
+      document.getElementById(`mp${pct}`).dataset.price = mp.toFixed(2);
+    });
+
+    document.getElementById('resultsCard').classList.add('show');
+  }
+
+  function usePrice(id) {
+    const price = document.getElementById(id).dataset.price;
+    if (price) {
+      document.getElementById('sellingPrice').value = price;
+      calculate();
+      document.getElementById('sellingPrice').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  function solveMinPrice(landed, postage, pack, promoRatePct, targetPct) {
+    let price = (landed + postage + pack) * 2;
+    for (let i = 0; i < 100; i++) {
+      let fees = 0;
+      if (sellerType === 'ltd') {
+        const fvf   = price * 0.109;
+        const reg   = price * 0.0035;
+        const fixed = price > 10 ? 0.40 : 0;
+        fees = (fvf + reg + fixed) * 1.20;
+        if (promoRatePct > 0) fees += price * (promoRatePct / 100) * 1.20;
+      }
+      const needed = (landed + postage + pack + fees) / (1 - targetPct / 100);
+      if (Math.abs(needed - price) < 0.001) { price = needed; break; }
+      price = needed;
+    }
+    return price;
+  }
+
+  // ── Save / Load products ────────────────────────────────────
+
+  function getSaved() {
+    try { return JSON.parse(localStorage.getItem('ebay_saved_products') || '[]'); } catch { return []; }
+  }
+
+  function setSaved(data) {
+    localStorage.setItem('ebay_saved_products', JSON.stringify(data));
+  }
+
+  function openSaveModal() {
+    document.getElementById('saveProductName').value  = '';
+    document.getElementById('saveProductNotes').value = '';
+    document.getElementById('saveModal').classList.add('show');
+    setTimeout(() => document.getElementById('saveProductName').focus(), 100);
+  }
+
+  function closeSaveModal() {
+    document.getElementById('saveModal').classList.remove('show');
+  }
+
+  function confirmSave() {
+    const name = document.getElementById('saveProductName').value.trim();
+    if (!name) { document.getElementById('saveProductName').focus(); return; }
+
+    const product = {
+      id:          Date.now(),
+      name,
+      notes:       document.getElementById('saveProductNotes').value.trim(),
+      landedCost:  parseFloat(document.getElementById('landedCost').value)    || 0,
+      sellingPrice:parseFloat(document.getElementById('sellingPrice').value)  || 0,
+      postage:     parseFloat(document.getElementById('postageCost').value)   || 3.10,
+      promoRate:   parseFloat(document.getElementById('promoRate').value)     || 5,
+      packingType,
+      sellerType,
+      promoEnabled
+    };
+
+    const saved = getSaved();
+    saved.unshift(product);
+    setSaved(saved);
+    renderSaved();
+    closeSaveModal();
+  }
+
+  function loadProduct(id) {
+    const saved   = getSaved();
+    const product = saved.find(p => p.id === id);
+    if (!product) return;
+
+    document.getElementById('landedCost').value    = product.landedCost;
+    document.getElementById('sellingPrice').value  = product.sellingPrice;
+    document.getElementById('postageCost').value   = product.postage;
+    document.getElementById('promoRate').value     = product.promoRate;
+
+    setPacking(product.packingType);
+    setSeller(product.sellerType);
+    setPromo(product.promoEnabled);
+    calculate();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function deleteProduct(id, e) {
+    e.stopPropagation();
+    const saved = getSaved().filter(p => p.id !== id);
+    setSaved(saved);
+    renderSaved();
+  }
+
+  function clearAllSaved() {
+    if (confirm('Delete all saved products?')) {
+      localStorage.removeItem('ebay_saved_products');
+      renderSaved();
+    }
+  }
+
+  function renderSaved() {
+    const saved = getSaved();
+    const el    = document.getElementById('savedList');
+    if (!saved.length) {
+      el.innerHTML = '<div class="saved-empty">No saved products yet.<br>Fill in the calculator and click<br>"Save this product".</div>';
+      return;
+    }
+    el.innerHTML = saved.map(p => `
+      <div class="saved-item" onclick="loadProduct(${p.id})">
+        <button class="si-delete" onclick="deleteProduct(${p.id}, event)">✕</button>
+        <div class="si-name">${p.name}</div>
+        <div class="si-meta">
+          <span>Cost £${p.landedCost.toFixed(2)}</span>
+          ${p.sellingPrice ? `<span>Sell £${p.sellingPrice.toFixed(2)}</span>` : ''}
+          ${p.notes ? `<span style="color:#bbb;font-style:italic">${p.notes}</span>` : ''}
+        </div>
+      </div>`).join('');
+  }
+
+  // Close modal on overlay click
+  document.getElementById('saveModal').addEventListener('click', function(e) {
+    if (e.target === this) closeSaveModal();
+  });
+
+  // Enter key in modal
+  document.getElementById('saveProductNotes').addEventListener('keydown', e => {
+    if (e.key === 'Enter') confirmSave();
+  });
+
+  // Init
+  renderSaved();
+  calculate();
+</script>
+
+</body>
+</html>

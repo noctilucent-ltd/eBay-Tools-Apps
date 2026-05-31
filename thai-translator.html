@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thai ↔ English Translator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f0f1a;
+      color: #e8e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .wrap { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: #6b7280; margin-bottom: 20px; }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    /* Mode selector */
+    .mode-row { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .mode-chip {
+      padding: 7px 16px; border-radius: 99px;
+      font-size: 12px; font-weight: 700;
+      border: 1.5px solid #2a2a4a;
+      cursor: pointer; color: #6b7280;
+      transition: all 0.15s;
+      background: #0f0f1a;
+    }
+    .mode-chip.active { border-color: #6366f1; color: #a5b4fc; background: rgba(99,102,241,0.12); }
+
+    /* Translation panels */
+    .trans-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: start; margin-bottom: 14px; }
+    .trans-panel label {
+      display: block; font-size: 10px; font-weight: 700;
+      color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    textarea {
+      width: 100%;
+      background: #0f0f1a;
+      border: 1.5px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 14px;
+      color: #e8e8f0;
+      outline: none;
+      resize: vertical;
+      min-height: 140px;
+      font-family: inherit;
+      line-height: 1.6;
+      transition: border-color 0.2s;
+    }
+    textarea:focus { border-color: #6366f1; }
+    textarea.output {
+      background: #12121f;
+      color: #a5b4fc;
+      cursor: default;
+    }
+    textarea.output.filled { color: #e8e8f0; }
+
+    .swap-btn {
+      width: 40px; height: 40px;
+      background: #2a2a4a;
+      border: none; border-radius: 99px;
+      color: #a5b4fc; font-size: 18px;
+      cursor: pointer; margin-top: 26px;
+      transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .swap-btn:hover { background: #6366f1; color: white; }
+
+    .btn-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .btn {
+      padding: 11px 20px;
+      border: none; border-radius: 10px;
+      font-size: 14px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: all 0.15s;
+    }
+    .btn-primary { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; flex: 1; }
+    .btn-primary:hover:not(:disabled) { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-copy { background: #2a2a4a; color: #a5b4fc; }
+    .btn-copy:hover { background: #3a3a5a; }
+    .btn-clear { background: rgba(239,68,68,0.1); color: #f87171; }
+    .btn-clear:hover { background: rgba(239,68,68,0.2); }
+
+    /* Spinner */
+    .spinner {
+      display: none; text-align: center; padding: 16px 0;
+      font-size: 12px; color: #6b7280;
+    }
+    .spinner::before {
+      content: ''; display: block;
+      width: 28px; height: 28px;
+      border: 3px solid #2a2a4a; border-top-color: #6366f1;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      margin: 0 auto 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Extra results */
+    .extras { display: none; }
+    .extra-section { margin-bottom: 12px; }
+    .extra-label {
+      font-size: 10px; font-weight: 700; color: #6b7280;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .extra-box {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      color: #e8e8f0;
+      line-height: 1.7;
+    }
+    .safe-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .safe-tag {
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      color: #10b981;
+      border-radius: 99px;
+      padding: 3px 11px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .safe-tag:hover { background: rgba(16,185,129,0.2); }
+
+    /* History */
+    .hist-list { display: flex; flex-direction: column; gap: 6px; }
+    .hist-item {
+      background: #0f0f1a;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .hist-item:hover { border-color: #6366f1; }
+    .hist-orig { font-size: 12px; color: #6b7280; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hist-trans { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* Quick phrases */
+    .phrases { display: flex; flex-wrap: wrap; gap: 6px; }
+    .phrase {
+      background: #0f0f1a; border: 1px solid #2a2a4a;
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; cursor: pointer; color: #a5b4fc;
+      transition: all 0.15s;
+    }
+    .phrase:hover { border-color: #6366f1; }
+
+    .error-box {
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 12px; color: #f87171; display: none; margin-top: 8px;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed; bottom: 16px; right: 16px;
+      background: #1a1a2e; border: 1px solid #2a2a4a;
+      color: #e8e8f0; padding: 10px 16px;
+      border-radius: 9px; font-size: 13px; font-weight: 600;
+      display: none; z-index: 100;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    @media (max-width: 600px) {
+      .trans-grid { grid-template-columns: 1fr; }
+      .swap-btn { margin: 0 auto; transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🌏 Thai ↔ English Translator</h1>
+  <p class="subtitle">Powered by Gemini · Product labels, supplier messages & safe eBay wording</p>
+
+  <!-- Mode -->
+  <div class="mode-row">
+    <div class="mode-chip active" data-mode="general" onclick="setMode(this)">💬 General translation</div>
+    <div class="mode-chip" data-mode="label" onclick="setMode(this)">🏷️ Product label</div>
+    <div class="mode-chip" data-mode="supplier" onclick="setMode(this)">📦 Supplier message</div>
+    <div class="mode-chip" data-mode="ebay" onclick="setMode(this)">🛍️ eBay-safe wording</div>
+  </div>
+
+  <div class="card">
+    <!-- Translation area -->
+    <div class="trans-grid">
+      <div class="trans-panel">
+        <label id="srcLabel">Thai</label>
+        <textarea id="srcText" placeholder="พิมพ์ข้อความภาษาไทยที่นี่…&#10;Type Thai or English text here…"></textarea>
+      </div>
+      <button class="swap-btn" onclick="swapLang()" title="Swap languages">⇄</button>
+      <div class="trans-panel">
+        <label id="tgtLabel">English</label>
+        <textarea id="tgtText" class="output" placeholder="Translation appears here…" readonly></textarea>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" id="translateBtn" onclick="translate()">🌏 Translate</button>
+      <button class="btn btn-copy" onclick="copyTranslation()">📋 Copy</button>
+      <button class="btn btn-clear" onclick="clearAll()">✕ Clear</button>
+    </div>
+
+    <div class="spinner" id="spinner">Translating with Gemini…</div>
+    <div class="error-box" id="errorBox"></div>
+  </div>
+
+  <!-- Extra results (label/supplier/ebay modes) -->
+  <div class="card extras" id="extrasCard">
+    <div class="extra-section" id="notesSection" style="display:none">
+      <div class="extra-label">📝 Notes</div>
+      <div class="extra-box" id="notesBox"></div>
+    </div>
+    <div class="extra-section" id="safeSection" style="display:none">
+      <div class="extra-label">✅ Safe eBay wording suggestions</div>
+      <div class="safe-tags" id="safeTags"></div>
+    </div>
+    <div class="extra-section" id="replySection" style="display:none">
+      <div class="extra-label">💬 Suggested Thai reply</div>
+      <div class="extra-box" id="replyBox"></div>
+      <button class="btn btn-copy" style="margin-top:8px;padding:7px 14px;font-size:12px" onclick="copyReply()">📋 Copy reply</button>
+    </div>
+  </div>
+
+  <!-- Quick phrases -->
+  <div class="card">
+    <div class="extra-label" style="margin-bottom:10px">⚡ Quick supplier phrases — click to translate</div>
+    <div class="phrases">
+      <div class="phrase" onclick="quickPhrase(this)">What is the price for 100 units?</div>
+      <div class="phrase" onclick="quickPhrase(this)">Can you send a sample?</div>
+      <div class="phrase" onclick="quickPhrase(this)">What is the minimum order quantity?</div>
+      <div class="phrase" onclick="quickPhrase(this)">Can you do a better price?</div>
+      <div class="phrase" onclick="quickPhrase(this)">When can you ship?</div>
+      <div class="phrase" onclick="quickPhrase(this)">Is this product authentic?</div>
+      <div class="phrase" onclick="quickPhrase(this)">Please send invoice</div>
+      <div class="phrase" onclick="quickPhrase(this)">Thank you, I will order next week</div>
+    </div>
+  </div>
+
+  <!-- History -->
+  <div class="card" id="histCard" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div class="extra-label" style="margin:0">🕐 Recent translations</div>
+      <button onclick="clearHistory()" style="background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer">Clear</button>
+    </div>
+    <div class="hist-list" id="histList"></div>
+  </div>
+</div>
+
+<div class="toast" id="toastEl"></div>
+
+<script>
+  let API_KEY = localStorage.getItem('gemini_api_key') || '';
+  const ENDPOINT = key => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+
+  let currentMode = 'general';
+  let srcLang = 'Thai';
+  let tgtLang = 'English';
+  let lastReply = '';
+
+  function checkKey() {
+    if (!API_KEY) {
+      const k = prompt('Enter your Gemini API key:');
+      if (!k) return false;
+      API_KEY = k.trim();
+      localStorage.setItem('gemini_api_key', API_KEY);
+    }
+    return true;
+  }
+
+  function setMode(el) {
+    document.querySelectorAll('.mode-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    currentMode = el.dataset.mode;
+    updatePlaceholders();
+  }
+
+  function updatePlaceholders() {
+    const placeholders = {
+      general: 'Type Thai or English text here…',
+      label: 'Paste Thai product label text here…\nIncludes ingredients, warnings, usage instructions.',
+      supplier: 'Paste supplier message in Thai here, or type what you want to say in English…',
+      ebay: 'Paste Thai product description here to get eBay-safe English wording…'
+    };
+    document.getElementById('srcText').placeholder = placeholders[currentMode];
+  }
+
+  function swapLang() {
+    [srcLang, tgtLang] = [tgtLang, srcLang];
+    document.getElementById('srcLabel').textContent = srcLang;
+    document.getElementById('tgtLabel').textContent = tgtLang;
+    const src = document.getElementById('srcText').value;
+    const tgt = document.getElementById('tgtText').value;
+    document.getElementById('srcText').value = tgt;
+    document.getElementById('tgtText').value = src;
+  }
+
+  function buildPrompt(text) {
+    const prompts = {
+      general: `Translate the following text between Thai and English. If the input is Thai, translate to English. If the input is English, translate to Thai.
+
+Input: "${text}"
+
+Return ONLY a JSON object:
+{
+  "translation": "<the translated text>",
+  "detected_language": "Thai" | "English",
+  "notes": "<optional: any important cultural or linguistic notes, or null>"
+}`,
+
+      label: `You are translating a Thai product label for a UK eBay seller who imports Thai products.
+
+Thai label text: "${text}"
+
+Translate completely and accurately. Include all ingredients, warnings, usage instructions, and any other text.
+
+Return ONLY a JSON object:
+{
+  "translation": "<full accurate translation>",
+  "detected_language": "Thai",
+  "notes": "<any important warnings or notes for the seller>",
+  "safe_ebay_phrases": ["<safe eBay-friendly phrase 1>", "<safe eBay-friendly phrase 2>", "<safe eBay-friendly phrase 3>"]
+}
+
+Safe phrases must avoid: pain relief, cures, treats, arthritis, injury, inflammation, migraine, medicine, medical treatment.
+Safe phrases should use: herbal balm, aromatic oil, cooling sensation, warming feel, traditional Thai remedy, massage balm.`,
+
+      supplier: `You are helping a UK importer communicate with a Thai supplier.
+
+Message: "${text}"
+
+If this is Thai → translate to English AND suggest a professional English reply.
+If this is English → translate to Thai so the seller can send it to their supplier.
+
+Return ONLY a JSON object:
+{
+  "translation": "<the translated text>",
+  "detected_language": "Thai" | "English",
+  "notes": "<any business context or tone notes>",
+  "suggested_reply": "<if Thai input: a professional Thai reply the seller could send back. If English input: null>"
+}`,
+
+      ebay: `You are helping a UK eBay seller create safe, compliant product descriptions from Thai product information.
+
+Thai product text: "${text}"
+
+Translate and rewrite this into eBay-safe English product description language.
+
+Rules:
+- Do NOT use: pain relief, cures, treats, arthritis, injury, inflammation, migraine, cold relief, medicine, medical treatment, antibacterial
+- DO use: herbal balm, aromatic oil, cooling sensation, warming feel, traditional Thai remedy, massage balm, travel-friendly, everyday use
+
+Return ONLY a JSON object:
+{
+  "translation": "<the eBay-safe English description>",
+  "detected_language": "Thai",
+  "notes": "<any terms that were changed and why>",
+  "safe_ebay_phrases": ["<ready-to-use eBay phrase 1>", "<ready-to-use eBay phrase 2>", "<ready-to-use eBay phrase 3>", "<ready-to-use eBay phrase 4>"]
+}`
+    };
+    return prompts[currentMode] || prompts.general;
+  }
+
+  async function translate() {
+    if (!checkKey()) return;
+    const text = document.getElementById('srcText').value.trim();
+    if (!text) { showError('Please enter text to translate.'); return; }
+
+    setLoading(true); hideError();
+    document.getElementById('extrasCard').style.display = 'none';
+
+    try {
+      const payload = {
+        contents: [{ parts: [{ text: buildPrompt(text) }] }],
+        generationConfig: { temperature: 0.2 }
+      };
+      const res  = await fetch(ENDPOINT(API_KEY), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || `Error ${res.status}`);
+
+      let raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      raw = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      const data = JSON.parse(match ? match[0] : raw);
+
+      // Show translation
+      const tgt = document.getElementById('tgtText');
+      tgt.value = data.translation || '';
+      tgt.classList.add('filled');
+
+      // Show extras
+      const hasExtras = data.notes || data.safe_ebay_phrases?.length || data.suggested_reply;
+      if (hasExtras) {
+        document.getElementById('extrasCard').style.display = 'block';
+
+        // Notes
+        if (data.notes) {
+          document.getElementById('notesSection').style.display = 'block';
+          document.getElementById('notesBox').textContent = data.notes;
+        } else { document.getElementById('notesSection').style.display = 'none'; }
+
+        // Safe eBay phrases
+        if (data.safe_ebay_phrases?.length) {
+          document.getElementById('safeSection').style.display = 'block';
+          document.getElementById('safeTags').innerHTML = data.safe_ebay_phrases.map(p =>
+            `<span class="safe-tag" onclick="copyText('${p.replace(/'/g,"\\'")}','${p.replace(/'/g,"\\'")}')">📋 ${p}</span>`
+          ).join('');
+        } else { document.getElementById('safeSection').style.display = 'none'; }
+
+        // Suggested reply
+        if (data.suggested_reply) {
+          lastReply = data.suggested_reply;
+          document.getElementById('replySection').style.display = 'block';
+          document.getElementById('replyBox').textContent = data.suggested_reply;
+        } else { document.getElementById('replySection').style.display = 'none'; lastReply = ''; }
+      }
+
+      // Save history
+      saveHistory(text, data.translation || '');
+
+    } catch(err) {
+      showError('Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function quickPhrase(el) {
+    document.getElementById('srcText').value = el.textContent;
+    // Set to supplier mode
+    document.querySelectorAll('.mode-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector('[data-mode="supplier"]').classList.add('active');
+    currentMode = 'supplier';
+    srcLang = 'English'; tgtLang = 'Thai';
+    document.getElementById('srcLabel').textContent = 'English';
+    document.getElementById('tgtLabel').textContent = 'Thai';
+    translate();
+  }
+
+  // ── History ───────────────────────────────────────────────────
+  function saveHistory(orig, trans) {
+    let hist = getHistory();
+    hist = hist.filter(h => h.orig !== orig);
+    hist.unshift({ orig, trans, ts: Date.now() });
+    if (hist.length > 15) hist = hist.slice(0,15);
+    localStorage.setItem('trans_history', JSON.stringify(hist));
+    renderHistory();
+  }
+  function getHistory() { try { return JSON.parse(localStorage.getItem('trans_history')||'[]'); } catch { return []; } }
+  function renderHistory() {
+    const hist = getHistory();
+    const card = document.getElementById('histCard');
+    if (!hist.length) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+    document.getElementById('histList').innerHTML = hist.map(h => `
+      <div class="hist-item" onclick="loadHistory('${h.orig.replace(/'/g,"\\'")}','${h.trans.replace(/'/g,"\\'")}')">
+        <div class="hist-orig">${h.orig}</div>
+        <div class="hist-trans">${h.trans}</div>
+      </div>`).join('');
+  }
+  function loadHistory(orig, trans) {
+    document.getElementById('srcText').value = orig;
+    document.getElementById('tgtText').value = trans;
+    document.getElementById('tgtText').classList.add('filled');
+  }
+  function clearHistory() { localStorage.removeItem('trans_history'); renderHistory(); }
+
+  // ── Helpers ───────────────────────────────────────────────────
+  function copyTranslation() {
+    const v = document.getElementById('tgtText').value;
+    if (!v) return;
+    navigator.clipboard.writeText(v).then(() => toast('✅ Copied!'));
+  }
+  function copyReply() {
+    if (!lastReply) return;
+    navigator.clipboard.writeText(lastReply).then(() => toast('✅ Reply copied!'));
+  }
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => toast('✅ Copied!'));
+  }
+  function clearAll() {
+    document.getElementById('srcText').value = '';
+    document.getElementById('tgtText').value = '';
+    document.getElementById('tgtText').classList.remove('filled');
+    document.getElementById('extrasCard').style.display = 'none';
+    hideError();
+  }
+  function setLoading(on) {
+    document.getElementById('spinner').style.display = on ? 'block' : 'none';
+    document.getElementById('translateBtn').disabled = on;
+    document.getElementById('translateBtn').textContent = on ? '⏳ Translating…' : '🌏 Translate';
+  }
+  function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.style.display = 'block'; }
+  function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+  function toast(msg) {
+    const t = document.getElementById('toastEl');
+    t.textContent = msg; t.style.display = 'block';
+    setTimeout(() => t.style.display = 'none', 1800);
+  }
+
+  document.getElementById('srcText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.ctrlKey) translate();
+  });
+
+  renderHistory();
+</script>
+</body>
+</html>

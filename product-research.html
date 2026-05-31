@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Product Research Assistant</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0f0f1a;
+      color: #e8e8f0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .layout { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: flex-start; }
+    h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: #6b7280; margin-bottom: 20px; }
+
+    .card {
+      background: #1a1a2e;
+      border: 1px solid #2a2a4a;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block; font-size: 11px; font-weight: 700;
+      color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    input[type="text"], textarea, select {
+      width: 100%;
+      background: #0f0f1a;
+      border: 1.5px solid #2a2a4a;
+      border-radius: 10px;
+      padding: 11px 13px;
+      font-size: 14px;
+      color: #e8e8f0;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 14px;
+      font-family: inherit;
+    }
+    input:focus, textarea:focus, select:focus { border-color: #6366f1; }
+    select option { background: #1a1a2e; }
+    textarea { resize: vertical; min-height: 70px; }
+
+    /* Category chips */
+    .cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .cat-chip {
+      background: #0f0f1a; border: 1.5px solid #2a2a4a;
+      border-radius: 8px; padding: 6px 12px;
+      font-size: 12px; cursor: pointer; color: #6b7280;
+      transition: all 0.15s;
+    }
+    .cat-chip:hover { border-color: #6366f1; color: #a5b4fc; }
+
+    .btn {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: white; border: none; border-radius: 11px;
+      font-size: 15px; font-weight: 700;
+      cursor: pointer; font-family: inherit;
+      transition: opacity 0.2s;
+    }
+    .btn:hover:not(:disabled) { opacity: 0.88; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .spinner {
+      display: none; text-align: center; padding: 14px 0;
+      font-size: 12px; color: #6b7280;
+    }
+    .spinner::before {
+      content: ''; display: block;
+      width: 30px; height: 30px;
+      border: 3px solid #2a2a4a; border-top-color: #6366f1;
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+      margin: 0 auto 8px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-box {
+      background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 12px; color: #f87171;
+      display: none; margin-top: 8px;
+    }
+
+    /* Results */
+    .results { display: none; }
+    .results-header { margin-bottom: 16px; }
+    .results-header h2 { font-size: 16px; font-weight: 700; }
+    .results-header p { font-size: 12px; color: #6b7280; margin-top: 4px; }
+
+    /* Market overview */
+    .overview-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .ov-box {
+      background: #0f0f1a; border: 1px solid #2a2a4a;
+      border-radius: 10px; padding: 14px; text-align: center;
+    }
+    .ov-val { font-size: 20px; font-weight: 700; color: #10b981; }
+    .ov-label { font-size: 10px; color: #6b7280; font-weight: 700; text-transform: uppercase; margin-top: 3px; }
+
+    /* Product cards */
+    .products-list { display: flex; flex-direction: column; gap: 12px; }
+    .prod-card {
+      background: #0f0f1a;
+      border: 1.5px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color 0.15s;
+    }
+    .prod-card:hover { border-color: #6366f1; }
+    .prod-card.top { border-color: #10b981; }
+    .prod-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .prod-name { font-size: 14px; font-weight: 700; flex: 1; }
+    .prod-rank {
+      font-size: 11px; font-weight: 700; padding: 3px 10px;
+      border-radius: 99px; white-space: nowrap; flex-shrink: 0;
+    }
+    .rank-1 { background: rgba(16,185,129,0.15); color: #10b981; }
+    .rank-2 { background: rgba(99,102,241,0.15); color: #a5b4fc; }
+    .rank-3 { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .rank-n { background: rgba(107,114,128,0.15); color: #6b7280; }
+
+    .prod-metrics { display: flex; flex-wrap: wrap; gap: 16px; margin-bottom: 10px; }
+    .prod-metric .pm-val { font-size: 16px; font-weight: 700; }
+    .prod-metric .pm-val.green { color: #10b981; }
+    .prod-metric .pm-val.orange { color: #f59e0b; }
+    .prod-metric .pm-val.red { color: #ef4444; }
+    .prod-metric .pm-label { font-size: 10px; color: #6b7280; font-weight: 700; text-transform: uppercase; }
+
+    .prod-why { font-size: 12px; color: #6b7280; line-height: 1.6; margin-bottom: 10px; }
+    .prod-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+    .prod-tag {
+      background: #1a1a2e; border: 1px solid #2a2a4a;
+      border-radius: 99px; padding: 3px 10px;
+      font-size: 11px; color: #6b7280;
+    }
+    .prod-tag.positive { border-color: rgba(16,185,129,0.3); color: #10b981; }
+    .prod-tag.warning  { border-color: rgba(245,158,11,0.3); color: #f59e0b; }
+
+    /* Opportunities */
+    .opp-list { display: flex; flex-direction: column; gap: 8px; }
+    .opp-item {
+      background: #0f0f1a; border: 1px solid #2a2a4a;
+      border-radius: 9px; padding: 12px;
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .opp-icon { font-size: 18px; flex-shrink: 0; }
+    .opp-text { font-size: 13px; line-height: 1.5; }
+    .opp-text strong { color: #a5b4fc; }
+
+    /* Empty state */
+    .empty-state { text-align: center; padding: 60px 20px; color: #4b4b6b; }
+    .empty-state .es-icon { font-size: 48px; margin-bottom: 14px; }
+    .empty-state p { font-size: 13px; }
+
+    /* Tips card */
+    .tips-list { list-style: none; }
+    .tips-list li { font-size: 12px; color: #6b7280; padding: 5px 0; border-bottom: 1px solid #2a2a4a; display: flex; gap: 8px; }
+    .tips-list li:last-child { border: none; }
+
+    @media (max-width: 700px) { .layout { grid-template-columns: 1fr; } .overview-grid { grid-template-columns: 1fr 1fr; } }
+  </style>
+</head>
+<body>
+<div class="layout">
+
+  <!-- LEFT -->
+  <div>
+    <div class="card">
+      <h1>🔍 Product Research</h1>
+      <p class="subtitle">Find what sells on eBay UK from Thailand · Powered by Gemini</p>
+
+      <label>Product category or keyword</label>
+      <input type="text" id="categoryInput" placeholder="e.g. Thai herbal balm, cooling powder, nasal inhaler…" />
+
+      <label>Quick categories — click to fill</label>
+      <div class="cat-chips">
+        <div class="cat-chip" onclick="fillCat(this)">Thai herbal balm</div>
+        <div class="cat-chip" onclick="fillCat(this)">Cooling powder</div>
+        <div class="cat-chip" onclick="fillCat(this)">Nasal inhaler</div>
+        <div class="cat-chip" onclick="fillCat(this)">Thai massage oil</div>
+        <div class="cat-chip" onclick="fillCat(this)">Herbal tea</div>
+        <div class="cat-chip" onclick="fillCat(this)">Thai skincare</div>
+        <div class="cat-chip" onclick="fillCat(this)">Muscle balm</div>
+        <div class="cat-chip" onclick="fillCat(this)">Traditional remedy</div>
+      </div>
+
+      <label>Budget per unit (GBP) <span style="font-weight:400;color:#4b5563;text-transform:none">(your target landed cost)</span></label>
+      <input type="text" id="budgetInput" placeholder="e.g. £2.00" />
+
+      <label>Focus</label>
+      <select id="focusSelect">
+        <option value="bestsellers">Best selling products right now</option>
+        <option value="margin">Highest margin opportunities</option>
+        <option value="gaps">Market gaps — low competition</option>
+        <option value="bundles">Bundle opportunities</option>
+        <option value="trending">Trending / growing demand</option>
+      </select>
+
+      <button class="btn" id="researchBtn" onclick="runResearch()">🔍 Research Now</button>
+      <div class="spinner" id="spinner">Gemini is researching eBay UK…<br><span style="font-size:11px;color:#4b4b6b">Searching live data, this takes 20–30 seconds</span></div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+
+    <div class="card" style="background:rgba(16,185,129,0.04);border-color:rgba(16,185,129,0.2)">
+      <div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">💡 Research tips</div>
+      <ul class="tips-list">
+        <li><span>🎯</span>Be specific — "Tiger Balm 30g" beats "balm"</li>
+        <li><span>💰</span>Set your budget to get realistic margin estimates</li>
+        <li><span>📦</span>Try "bundle opportunities" to find multi-pack gaps</li>
+        <li><span>🔄</span>Run again monthly — market changes fast</li>
+        <li><span>🇬🇧</span>All results are UK eBay focused</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div>
+    <div class="card">
+
+      <div id="emptyState" class="empty-state">
+        <div class="es-icon">🔍</div>
+        <p>Enter a category and hit Research.<br>Gemini will search eBay UK and return product opportunities with estimated margins.</p>
+      </div>
+
+      <div class="results" id="results">
+        <div class="results-header">
+          <h2 id="resultsTitle">Research results</h2>
+          <p id="resultsSubtitle"></p>
+        </div>
+
+        <!-- Market overview -->
+        <div class="overview-grid" id="overviewGrid"></div>
+
+        <!-- Products -->
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Top product opportunities</div>
+        <div class="products-list" id="productsList"></div>
+
+        <!-- Opportunities -->
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:0.5px;margin:16px 0 10px">💡 Strategic opportunities</div>
+        <div class="opp-list" id="oppList"></div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let API_KEY = localStorage.getItem('gemini_api_key') || '';
+  const ENDPOINT = key => `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`;
+
+  function checkKey() {
+    if (!API_KEY) {
+      const k = prompt('Enter your Gemini API key:');
+      if (!k) return false;
+      API_KEY = k.trim();
+      localStorage.setItem('gemini_api_key', API_KEY);
+    }
+    return true;
+  }
+
+  function fillCat(el) {
+    document.getElementById('categoryInput').value = el.textContent;
+  }
+
+  function buildPrompt(category, budget, focus) {
+    const focusMap = {
+      bestsellers: 'which products in this category sell best on eBay UK right now',
+      margin: 'which products in this category offer the highest profit margins for UK sellers importing from Thailand',
+      gaps: 'which product variants or niches in this category have low competition on eBay UK',
+      bundles: 'what bundle or multi-pack opportunities exist in this category on eBay UK',
+      trending: 'which products in this category are growing in demand on eBay UK'
+    };
+
+    return `You are an expert eBay UK market researcher specialising in Thai and Asian imported health, wellness, and beauty products.
+
+Research this for a UK seller who imports from Thailand:
+Category: "${category}"
+Focus: ${focusMap[focus] || focusMap.bestsellers}
+${budget ? `Target landed cost per unit: ${budget}` : ''}
+
+Search eBay UK for current listings, prices, and sales data. Analyse competition levels and margins.
+
+Return ONLY a valid JSON object — no markdown:
+{
+  "category": "${category}",
+  "market_summary": "<2-3 sentence overview of this market on eBay UK>",
+  "market_size": "<e.g. 'Competitive', 'Niche', 'Growing', 'Saturated'>",
+  "avg_selling_price_gbp": <typical selling price as a number>,
+  "avg_margin_pct": <typical margin percentage as a number>,
+  "demand_level": "<High / Medium / Low>",
+  "products": [
+    {
+      "name": "<specific product name and variant>",
+      "reason": "<why this is a good opportunity — 1-2 sentences>",
+      "typical_selling_price_gbp": <number>,
+      "estimated_cost_thb": <typical Thai market price in THB>,
+      "estimated_margin_pct": <estimated margin % after eBay fees and postage>,
+      "competition": "<Low / Medium / High>",
+      "demand": "<Low / Medium / High>",
+      "best_format": "<Single / 3-Pack / 6-Pack / Mixed bundle — what sells best>",
+      "tags": ["<positive tag>", "<positive tag>", "<warning tag if any>"]
+    }
+  ],
+  "opportunities": [
+    {
+      "icon": "<single emoji>",
+      "title": "<opportunity title>",
+      "detail": "<actionable advice in 1-2 sentences>"
+    }
+  ],
+  "avoid": "<products or approaches to avoid in this category>"
+}
+
+Include 4-6 specific products. Be realistic about margins (eBay takes ~13% total fees + £3.10 postage typical). Sort products best opportunity first.`;
+  }
+
+  async function runResearch() {
+    if (!checkKey()) return;
+    const category = document.getElementById('categoryInput').value.trim();
+    if (!category) { showError('Please enter a product category.'); return; }
+
+    const budget = document.getElementById('budgetInput').value.trim();
+    const focus  = document.getElementById('focusSelect').value;
+
+    setLoading(true); hideError();
+    document.getElementById('emptyState').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+
+    try {
+      const payload = {
+        contents: [{ parts: [{ text: buildPrompt(category, budget, focus) }] }],
+        tools: [{ google_search: {} }],
+        generationConfig: { temperature: 0.3 }
+      };
+      const res  = await fetch(ENDPOINT(API_KEY), { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error?.message || `Error ${res.status}`);
+
+      let raw = json.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      raw = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+      const match = raw.match(/\{[\s\S]*\}/);
+      const data = JSON.parse(match ? match[0] : raw);
+
+      showResults(data, category);
+    } catch(err) {
+      showError('Error: ' + err.message);
+      document.getElementById('emptyState').style.display = 'block';
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function showResults(data, category) {
+    document.getElementById('resultsTitle').textContent = `Results: ${data.category || category}`;
+    document.getElementById('resultsSubtitle').textContent = data.market_summary || '';
+
+    // Overview
+    const demandColor = { High:'#10b981', Medium:'#f59e0b', Low:'#ef4444' };
+    document.getElementById('overviewGrid').innerHTML = `
+      <div class="ov-box">
+        <div class="ov-val">£${data.avg_selling_price_gbp || '—'}</div>
+        <div class="ov-label">Avg selling price</div>
+      </div>
+      <div class="ov-box">
+        <div class="ov-val" style="color:${data.avg_margin_pct > 30 ? '#10b981' : data.avg_margin_pct > 15 ? '#f59e0b' : '#ef4444'}">${data.avg_margin_pct || '—'}%</div>
+        <div class="ov-label">Avg margin</div>
+      </div>
+      <div class="ov-box">
+        <div class="ov-val" style="color:${demandColor[data.demand_level]||'#e8e8f0'}">${data.demand_level || '—'}</div>
+        <div class="ov-label">Demand level</div>
+      </div>`;
+
+    // Products
+    const rankClass = ['rank-1','rank-2','rank-3'];
+    const rankLabel = ['⭐ Top pick','🥈 Strong','🥉 Good','','',''];
+    document.getElementById('productsList').innerHTML = (data.products || []).map((p, i) => {
+      const marginClass = p.estimated_margin_pct > 35 ? 'green' : p.estimated_margin_pct > 20 ? 'orange' : 'red';
+      const compColor   = { Low:'positive', Medium:'', High:'warning' };
+      const tags = (p.tags || []).map(t => {
+        const isWarning = t.toLowerCase().includes('compet') || t.toLowerCase().includes('risk') || t.toLowerCase().includes('careful');
+        return `<span class="prod-tag ${isWarning?'warning':'positive'}">${t}</span>`;
+      }).join('');
+
+      return `<div class="prod-card ${i===0?'top':''}">
+        <div class="prod-top">
+          <div class="prod-name">${p.name}</div>
+          <span class="prod-rank ${rankClass[i]||'rank-n'}">${rankLabel[i]||`#${i+1}`}</span>
+        </div>
+        <div class="prod-metrics">
+          <div class="prod-metric">
+            <div class="pm-val">£${p.typical_selling_price_gbp || '—'}</div>
+            <div class="pm-label">Sell price</div>
+          </div>
+          <div class="prod-metric">
+            <div class="pm-val">${p.estimated_cost_thb ? '฿'+p.estimated_cost_thb : '—'}</div>
+            <div class="pm-label">Cost THB</div>
+          </div>
+          <div class="prod-metric">
+            <div class="pm-val ${marginClass}">${p.estimated_margin_pct || '—'}%</div>
+            <div class="pm-label">Est. margin</div>
+          </div>
+          <div class="prod-metric">
+            <div class="pm-val">${p.competition || '—'}</div>
+            <div class="pm-label">Competition</div>
+          </div>
+        </div>
+        <div class="prod-why">📦 Best format: <strong>${p.best_format || 'Single'}</strong> &nbsp;·&nbsp; ${p.reason}</div>
+        <div class="prod-tags">${tags}</div>
+      </div>`;
+    }).join('');
+
+    // Opportunities
+    document.getElementById('oppList').innerHTML = (data.opportunities || []).map(o => `
+      <div class="opp-item">
+        <span class="opp-icon">${o.icon || '💡'}</span>
+        <div class="opp-text"><strong>${o.title}</strong><br>${o.detail}</div>
+      </div>`).join('');
+
+    if (data.avoid) {
+      document.getElementById('oppList').innerHTML += `
+        <div class="opp-item" style="border-color:rgba(239,68,68,0.3)">
+          <span class="opp-icon">⚠️</span>
+          <div class="opp-text"><strong style="color:#f87171">What to avoid</strong><br>${data.avoid}</div>
+        </div>`;
+    }
+
+    document.getElementById('results').style.display = 'block';
+  }
+
+  function setLoading(on) {
+    document.getElementById('spinner').style.display = on ? 'block' : 'none';
+    document.getElementById('researchBtn').disabled = on;
+    document.getElementById('researchBtn').textContent = on ? '⏳ Researching…' : '🔍 Research Now';
+  }
+  function showError(msg) { const b = document.getElementById('errorBox'); b.textContent = msg; b.style.display = 'block'; }
+  function hideError() { document.getElementById('errorBox').style.display = 'none'; }
+
+  document.getElementById('categoryInput').addEventListener('keydown', e => { if(e.key==='Enter') runResearch(); });
+</script>
+</body>
+</html>

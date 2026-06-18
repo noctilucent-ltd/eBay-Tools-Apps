@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice Generator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #f5f0e8; color: #3a2e22; min-height: 100vh; }
+
+/* ── App Shell ── */
+.app-header { background: #5c4a3a; color: #fdf8f3; padding: 12px 24px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; }
+.app-header h1 { font-size: 1rem; font-weight: 700; letter-spacing: 0.02em; }
+.nav-btns { margin-left: auto; display: flex; gap: 8px; }
+.nav-btn { background: none; border: 1px solid rgba(255,255,255,0.3); color: #fdf8f3; padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.82rem; transition: 0.15s; }
+.nav-btn:hover { background: rgba(255,255,255,0.12); }
+.nav-btn.active { background: #fdf8f3; color: #5c4a3a; font-weight: 600; }
+
+/* ── Layout ── */
+.main { display: grid; grid-template-columns: 380px 1fr; height: calc(100vh - 48px); overflow: hidden; }
+.form-panel { background: #fffdf9; overflow-y: auto; padding: 18px; border-right: 1px solid #e0d5c5; }
+.preview-panel { overflow-y: auto; padding: 28px 24px; background: #e8ddd0; display: flex; justify-content: center; align-items: flex-start; }
+
+/* ── Form ── */
+.form-section { margin-bottom: 18px; }
+.form-section h3 { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #8b6b47; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid #ede4d8; }
+label { display: block; font-size: 0.78rem; font-weight: 600; color: #5c4a3a; margin-bottom: 3px; }
+input, select, textarea { width: 100%; padding: 7px 9px; border: 1px solid #d4c4b0; border-radius: 6px; font-size: 0.83rem; color: #3a2e22; background: #fffdf9; }
+input:focus, select:focus, textarea:focus { outline: none; border-color: #8b6b47; box-shadow: 0 0 0 2px rgba(139,107,71,0.15); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.form-field { margin-bottom: 10px; }
+.field-hint { font-size: 0.71rem; color: #b09070; margin-top: 2px; font-style: italic; }
+
+/* ── Supplier row ── */
+.supplier-select-row { display: flex; gap: 6px; align-items: flex-end; margin-bottom: 10px; }
+.supplier-select-row select { flex: 1; }
+.btn-icon { background: none; border: 1px solid #e0d5c5; border-radius: 6px; padding: 7px 10px; cursor: pointer; font-size: 0.82rem; color: #8b6b47; white-space: nowrap; }
+.btn-icon:hover { background: #f5ede2; }
+.btn-icon.del:hover { color: #ef4444; border-color: #fca5a5; background: #fff5f5; }
+.btn-icon.add { color: #6366f1; border-color: #c7d2fe; }
+.btn-icon.add:hover { background: #eef2ff; color: #4338ca; }
+
+/* ── Collapsible supplier details ── */
+.sup-details-toggle { background: none; border: none; font-size: 0.78rem; font-weight: 600; color: #8b6b47; cursor: pointer; padding: 0; margin-bottom: 10px; display: flex; align-items: center; gap: 4px; }
+.sup-details-toggle:hover { color: #5c4a3a; }
+.sup-details-card { background: #fdf5ec; border: 1px solid #e8d8c4; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.sup-details-card h4 { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: #8b6b47; margin-bottom: 10px; }
+
+/* ── New Supplier Card ── */
+.new-sup-card { background: #fdf5ec; border: 1.5px solid #e8d8c4; border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+.new-sup-card h4 { font-size: 0.78rem; font-weight: 700; color: #5c4a3a; margin-bottom: 12px; }
+.theme-picker { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
+.theme-opt { border: 2px solid #e0d5c5; border-radius: 8px; padding: 8px 6px; cursor: pointer; text-align: center; font-size: 0.72rem; font-weight: 600; transition: 0.15s; color: #5c4a3a; }
+.theme-opt:hover { border-color: #b09070; }
+.theme-opt.selected { border-color: #8b6b47; background: #fdf0e4; }
+.theme-opt .swatch { width: 100%; height: 18px; border-radius: 4px; margin-bottom: 5px; }
+.swatch-tea { background: #2d5016; }
+.swatch-transport { background: #0f2744; }
+.swatch-generic { background: #1e293b; }
+.new-sup-actions { display: flex; gap: 8px; margin-top: 8px; }
+.btn-sm-primary { background: #8b6b47; color: white; border: none; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 700; }
+.btn-sm-primary:hover { background: #5c4a3a; }
+.btn-sm-secondary { background: #fffdf9; color: #8b6b47; border: 1px solid #e0d5c5; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; }
+
+/* ── Items ── */
+.items-header { display: grid; grid-template-columns: 1fr 52px 70px 82px 24px; gap: 4px; font-size: 0.65rem; font-weight: 700; color: #b09070; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; padding: 0 2px; }
+.item-row { display: grid; grid-template-columns: 1fr 52px 70px 82px 24px; gap: 4px; margin-bottom: 5px; align-items: center; }
+.item-row input, .item-row select { padding: 6px 7px; font-size: 0.8rem; }
+.remove-btn { background: none; border: none; color: #ef4444; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 0; width: 24px; text-align: center; }
+.add-item-btn { background: none; border: 1px dashed #d4c4b0; color: #8b6b47; padding: 6px; width: 100%; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-top: 3px; }
+.add-item-btn:hover { background: #fdf5ec; }
+
+/* ── Toggle ── */
+.toggle-row { display: flex; align-items: center; gap: 9px; margin-bottom: 10px; }
+.toggle { position: relative; display: inline-block; width: 36px; height: 20px; flex-shrink: 0; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #d4c4b0; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+.toggle-slider:before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: white; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+.toggle input:checked + .toggle-slider { background: #8b6b47; }
+.toggle input:checked + .toggle-slider:before { transform: translateX(16px); }
+.toggle-label { font-size: 0.83rem; color: #5c4a3a; }
+.sub-note { font-size: 0.73rem; color: #b09070; margin-top: -6px; margin-bottom: 8px; font-style: italic; }
+
+/* ── Buttons ── */
+.action-row { display: flex; gap: 8px; margin-top: 4px; padding-top: 14px; border-top: 1px solid #ede4d8; }
+.btn-primary { background: #8b6b47; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.86rem; font-weight: 700; flex: 1; }
+.btn-primary:hover { background: #5c4a3a; }
+.btn-secondary { background: #fdf5ec; color: #5c4a3a; border: 1px solid #e0d5c5; padding: 10px 14px; border-radius: 8px; cursor: pointer; font-size: 0.86rem; }
+.btn-secondary:hover { background: #f5ede2; }
+
+/* ── Conversion rate ── */
+.conv-rate-row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; margin-bottom: 8px; background: #fdf5ec; border: 1px solid #e8d8c4; border-radius: 8px; padding: 10px 12px; }
+.conv-rate-label { font-size: 0.82rem; color: #8b6b47; font-weight: 600; white-space: nowrap; }
+.conv-rate-row input { background: #fffdf9; }
+
+/* ── Invoice Paper ── */
+.invoice-paper { width: 794px; min-height: 1050px; background: white; box-shadow: 0 4px 28px rgba(0,0,0,0.14); }
+
+/* ── Bank Details Box (shared all themes) ── */
+.inv-bank-box { margin: 0 0 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; font-family: system-ui, sans-serif; }
+.inv-bank-hdr { background: #f8fafc; padding: 8px 16px; font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.09em; color: #64748b; border-bottom: 1px solid #e2e8f0; }
+.inv-bank-body { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 28px; padding: 12px 16px; }
+.inv-bank-label { font-size: 0.67rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #94a3b8; margin-bottom: 1px; }
+.inv-bank-value { font-size: 0.84rem; color: #1e293b; font-weight: 500; }
+
+/* ── GBP Reporting Block ── */
+.inv-conv-block { margin: 0 0 20px; border: 2px solid #6366f1; border-radius: 10px; overflow: hidden; font-family: system-ui, sans-serif; }
+.inv-conv-block .conv-hdr { background: #6366f1; color: white; padding: 9px 16px; font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; }
+.inv-conv-block .conv-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 16px; font-size: 0.84rem; border-bottom: 1px solid #e0e7ff; color: #374151; }
+.inv-conv-block .conv-row:last-child { border-bottom: none; }
+.inv-conv-block .conv-row.conv-grand { font-weight: 800; font-size: 1rem; color: #3730a3; background: #eef2ff; }
+
+/* ══════════════════════════════════
+   TEA TEMPLATE
+   ══════════════════════════════════ */
+.theme-tea { padding: 56px; font-family: Georgia, 'Times New Roman', serif; color: #2c2c1e; }
+.theme-tea .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 36px; padding-bottom: 22px; border-bottom: 2.5px solid #3d6b20; }
+.theme-tea .inv-supplier-name { font-size: 1.55rem; font-weight: bold; color: #2d5016; }
+.theme-tea .inv-supplier-sub { font-size: 0.85rem; color: #5a7a3a; margin-top: 3px; font-style: italic; }
+.theme-tea .inv-supplier-meta { font-size: 0.8rem; color: #777; margin-top: 6px; line-height: 1.7; font-family: system-ui, sans-serif; }
+.theme-tea .inv-title-block { text-align: right; }
+.theme-tea .inv-main-title { font-size: 2.2rem; font-weight: bold; color: #2d5016; letter-spacing: 0.06em; font-family: system-ui, sans-serif; }
+.theme-tea .inv-number { font-size: 0.85rem; color: #5a7a3a; margin-top: 4px; }
+.theme-tea .inv-dates { font-size: 0.82rem; color: #777; margin-top: 4px; line-height: 1.6; font-family: system-ui, sans-serif; }
+.theme-tea .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 32px; }
+.theme-tea .inv-party-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: #3d6b20; margin-bottom: 6px; font-family: system-ui, sans-serif; }
+.theme-tea .inv-party-name { font-size: 1rem; font-weight: bold; color: #1a1a0e; }
+.theme-tea .inv-party-detail { font-size: 0.81rem; color: #555; margin-top: 3px; line-height: 1.65; font-family: system-ui, sans-serif; }
+.theme-tea .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-family: system-ui, sans-serif; }
+.theme-tea .inv-table thead tr { background: #2d5016; color: white; }
+.theme-tea .inv-table thead th { padding: 10px 12px; font-size: 0.75rem; font-weight: 600; text-align: left; }
+.theme-tea .inv-table thead th.num { text-align: right; }
+.theme-tea .inv-table tbody tr:nth-child(even) { background: #f6faf0; }
+.theme-tea .inv-table td { padding: 10px 12px; font-size: 0.86rem; border-bottom: 1px solid #e8f0de; }
+.theme-tea .inv-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.theme-tea .inv-totals { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+.theme-tea .inv-totals-box { min-width: 240px; }
+.theme-tea .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.86rem; border-bottom: 1px solid #e8f0de; font-family: system-ui, sans-serif; }
+.theme-tea .totals-row.grand { font-weight: bold; font-size: 1rem; color: #2d5016; border-top: 2px solid #2d5016; border-bottom: none; padding-top: 10px; margin-top: 2px; }
+.theme-tea .inv-notes { background: #f6faf0; border-left: 3px solid #3d6b20; padding: 12px 16px; font-size: 0.83rem; color: #555; margin-bottom: 20px; font-family: system-ui, sans-serif; line-height: 1.6; }
+.theme-tea .inv-bank-box { border-color: #c8ddb0; }
+.theme-tea .inv-bank-hdr { background: #f6faf0; border-color: #c8ddb0; color: #4a7c2f; }
+
+/* ══════════════════════════════════════
+   TRANSPORT TEMPLATE
+   ══════════════════════════════════════ */
+.theme-transport { font-family: 'Segoe UI', system-ui, sans-serif; color: #0f172a; }
+.theme-transport .inv-header { background: #0f2744; padding: 36px 48px 28px; }
+.theme-transport .inv-header-inner { display: flex; justify-content: space-between; align-items: flex-start; }
+.theme-transport .inv-supplier-name { font-size: 1.45rem; font-weight: 800; color: white; }
+.theme-transport .inv-supplier-sub { font-size: 0.78rem; color: #f59e0b; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
+.theme-transport .inv-supplier-meta { font-size: 0.79rem; color: #94a3b8; margin-top: 6px; line-height: 1.7; }
+.theme-transport .inv-header-right { text-align: right; }
+.theme-transport .inv-main-title { font-size: 2.1rem; font-weight: 900; color: #f59e0b; letter-spacing: 0.06em; }
+.theme-transport .inv-number { font-size: 0.82rem; color: #93c5fd; margin-top: 6px; }
+.theme-transport .inv-dates { font-size: 0.8rem; color: #94a3b8; margin-top: 3px; line-height: 1.6; }
+.theme-transport .inv-accent { height: 5px; background: linear-gradient(to right, #f59e0b 0%, #0f2744 60%); }
+.theme-transport .inv-body { padding: 36px 48px; }
+.theme-transport .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 32px; }
+.theme-transport .inv-party-label { font-size: 0.63rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: #0f2744; padding-bottom: 5px; border-bottom: 2.5px solid #f59e0b; display: inline-block; margin-bottom: 8px; }
+.theme-transport .inv-party-name { font-size: 0.97rem; font-weight: 700; color: #0f172a; }
+.theme-transport .inv-party-detail { font-size: 0.8rem; color: #64748b; margin-top: 3px; line-height: 1.65; }
+.theme-transport .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.theme-transport .inv-table thead tr { background: #0f2744; }
+.theme-transport .inv-table thead th { padding: 11px 13px; font-size: 0.72rem; font-weight: 700; text-align: left; color: white; text-transform: uppercase; letter-spacing: 0.06em; }
+.theme-transport .inv-table thead th.num { text-align: right; }
+.theme-transport .inv-table tbody tr:nth-child(even) { background: #f8faff; }
+.theme-transport .inv-table td { padding: 11px 13px; font-size: 0.85rem; border-bottom: 1px solid #e2e8f0; }
+.theme-transport .inv-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.theme-transport .inv-table tbody tr:last-child td { border-bottom: none; }
+.theme-transport .inv-totals { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+.theme-transport .inv-totals-box { min-width: 260px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.theme-transport .totals-row { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 0.85rem; border-bottom: 1px solid #e2e8f0; }
+.theme-transport .totals-row:last-child { border-bottom: none; }
+.theme-transport .totals-row.grand { font-weight: 800; font-size: 0.98rem; color: white; background: #0f2744; padding: 12px 16px; }
+.theme-transport .inv-notes { border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; padding: 13px 17px; font-size: 0.83rem; color: #64748b; margin-bottom: 20px; border-radius: 0 6px 6px 0; line-height: 1.6; }
+
+/* ══════════════════════════════════
+   GENERIC TEMPLATE
+   ══════════════════════════════════ */
+.theme-generic { font-family: 'Segoe UI', system-ui, sans-serif; color: #0f172a; }
+.theme-generic .inv-header { background: #1e293b; padding: 36px 48px 28px; display: flex; justify-content: space-between; align-items: flex-start; }
+.theme-generic .inv-supplier-name { font-size: 1.4rem; font-weight: 800; color: white; }
+.theme-generic .inv-supplier-sub { font-size: 0.8rem; color: #94a3b8; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+.theme-generic .inv-supplier-meta { font-size: 0.79rem; color: #94a3b8; margin-top: 6px; line-height: 1.7; }
+.theme-generic .inv-title-block { text-align: right; }
+.theme-generic .inv-main-title { font-size: 2rem; font-weight: 900; color: #a5b4fc; letter-spacing: 0.06em; }
+.theme-generic .inv-number { font-size: 0.82rem; color: #c7d2fe; margin-top: 4px; }
+.theme-generic .inv-dates { font-size: 0.8rem; color: #94a3b8; margin-top: 3px; line-height: 1.6; }
+.theme-generic .inv-accent { height: 4px; background: #6366f1; }
+.theme-generic .inv-body { padding: 36px 48px; }
+.theme-generic .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 32px; }
+.theme-generic .inv-party-label { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.12em; color: #6366f1; margin-bottom: 7px; }
+.theme-generic .inv-party-name { font-size: 0.97rem; font-weight: 700; color: #0f172a; }
+.theme-generic .inv-party-detail { font-size: 0.8rem; color: #64748b; margin-top: 3px; line-height: 1.65; }
+.theme-generic .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+.theme-generic .inv-table thead tr { background: #1e293b; }
+.theme-generic .inv-table thead th { padding: 11px 13px; font-size: 0.72rem; font-weight: 700; text-align: left; color: white; text-transform: uppercase; letter-spacing: 0.05em; }
+.theme-generic .inv-table thead th.num { text-align: right; }
+.theme-generic .inv-table tbody tr:nth-child(even) { background: #f8fafc; }
+.theme-generic .inv-table td { padding: 11px 13px; font-size: 0.85rem; border-bottom: 1px solid #e2e8f0; }
+.theme-generic .inv-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.theme-generic .inv-table tbody tr:last-child td { border-bottom: none; }
+.theme-generic .inv-totals { display: flex; justify-content: flex-end; margin-bottom: 20px; }
+.theme-generic .inv-totals-box { min-width: 250px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+.theme-generic .totals-row { display: flex; justify-content: space-between; padding: 8px 16px; font-size: 0.85rem; border-bottom: 1px solid #e2e8f0; }
+.theme-generic .totals-row:last-child { border-bottom: none; }
+.theme-generic .totals-row.grand { font-weight: 800; font-size: 0.98rem; color: white; background: #1e293b; padding: 12px 16px; }
+.theme-generic .inv-notes { border: 1px solid #e2e8f0; border-left: 4px solid #6366f1; padding: 13px 17px; font-size: 0.83rem; color: #64748b; margin-bottom: 20px; border-radius: 0 6px 6px 0; line-height: 1.6; }
+
+/* ── History ── */
+.history-view { padding: 28px; max-width: 1020px; margin: 0 auto; width: 100%; }
+.history-view h2 { font-size: 1.1rem; font-weight: 700; color: #5c4a3a; margin-bottom: 18px; }
+.history-card { background: #fffdf9; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #e0d5c5; }
+.history-table { width: 100%; border-collapse: collapse; }
+.history-table th { padding: 11px 14px; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #8b6b47; text-align: left; background: #fdf5ec; border-bottom: 1px solid #e0d5c5; }
+.history-table td { padding: 11px 14px; font-size: 0.85rem; border-bottom: 1px solid #f5ede2; vertical-align: middle; }
+.history-table tr:last-child td { border-bottom: none; }
+.history-table tr:hover td { background: #fdf9f5; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; }
+.badge-tea { background: #dcfce7; color: #15803d; }
+.badge-transport { background: #dbeafe; color: #1d4ed8; }
+.badge-generic { background: #ede9fe; color: #6d28d9; }
+.icon-btn { background: none; border: none; cursor: pointer; padding: 5px 7px; border-radius: 5px; font-size: 0.85rem; }
+.icon-btn:hover { background: #f5ede2; }
+.empty-state { text-align: center; padding: 60px 20px; color: #b09070; font-size: 0.9rem; line-height: 1.8; }
+
+/* ── Toast ── */
+.toast { position: fixed; bottom: 24px; right: 24px; background: #5c4a3a; color: white; padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 4px 20px rgba(0,0,0,0.2); z-index: 9999; animation: slideIn 0.2s ease; }
+@keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+/* ── Print ── */
+@media print {
+  .app-header, .form-panel { display: none !important; }
+  .main { display: block !important; height: auto !important; overflow: visible !important; }
+  .preview-panel { padding: 0 !important; background: white !important; overflow: visible !important; display: block !important; }
+  .invoice-paper { box-shadow: none !important; width: 100% !important; min-height: auto !important; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ════════════════════════════════
+//  BUILT-IN SUPPLIERS
+// ════════════════════════════════
+const BUILTIN_SUPPLIERS = {
+  sushil: {
+    id: 'sushil', name: 'Sushil Ghimire', business: 'Tea Supplier',
+    address: 'Kathmandu, Nepal', theme: 'tea',
+    defaultCurrency: 'NPR', defaultVatEnabled: false, defaultVatRate: 0, defaultUnit: 'kg'
+  },
+  roadmap: {
+    id: 'roadmap', name: 'Road Map Logistics Co., Ltd.', business: 'Transportation & Logistics',
+    address: 'Thailand', theme: 'transport',
+    defaultCurrency: 'THB', defaultVatEnabled: false, defaultVatRate: 7, defaultUnit: 'trip'
+  }
+};
+
+const BUYERS_DEFAULT = [
+  { id: 'noctilucent', name: 'Noctilucent Ltd' },
+  { id: 'andrei', name: 'Andrei Botnaru' }
+];
+
+const CURRENCIES = ['GBP','USD','EUR','NPR','THB','CNY','INR','AUD','SGD','MYR','VND'];
+const UNITS = ['kg','g','lb','pcs','box','bag','trip','day','hr','km','load','set','item'];
+
+// ════════════════════════════════
+//  SUPPLIER PROFILE PERSISTENCE
+// ════════════════════════════════
+function getSupplierProfiles() {
+  try { return JSON.parse(localStorage.getItem('supplier_profiles') || '{}'); } catch { return {}; }
+}
+function getSupplierProfile(id) {
+  return getSupplierProfiles()[id] || blankSupProfile();
+}
+function saveSupplierProfile(id, profile) {
+  const p = getSupplierProfiles(); p[id] = { ...profile };
+  localStorage.setItem('supplier_profiles', JSON.stringify(p));
+}
+function blankSupProfile() {
+  return { address: '', phone: '', email: '', bankName: '', accountName: '', accountNumber: '', swiftIban: '', bankRef: '' };
+}
+
+// ════════════════════════════════
+//  BUYER PROFILE PERSISTENCE
+// ════════════════════════════════
+function getBuyerProfiles() {
+  try { return JSON.parse(localStorage.getItem('buyer_profiles') || '{}'); } catch { return {}; }
+}
+function getBuyerProfile(id) {
+  return getBuyerProfiles()[id] || { address: '', vatNo: '', companyNo: '', email: '', phone: '' };
+}
+function saveBuyerProfile(id, profile) {
+  const p = getBuyerProfiles(); p[id] = { ...profile };
+  localStorage.setItem('buyer_profiles', JSON.stringify(p));
+}
+
+// ════════════════════════════════
+//  CUSTOM SUPPLIER STORAGE
+// ════════════════════════════════
+function getCustomSuppliers() {
+  try { return JSON.parse(localStorage.getItem('custom_suppliers') || '{}'); } catch { return {}; }
+}
+function saveCustomSupplier(sup) {
+  const c = getCustomSuppliers(); c[sup.id] = sup;
+  localStorage.setItem('custom_suppliers', JSON.stringify(c));
+}
+function deleteCustomSupplier(id) {
+  const c = getCustomSuppliers(); delete c[id];
+  localStorage.setItem('custom_suppliers', JSON.stringify(c));
+}
+function getAllSuppliers() { return { ...BUILTIN_SUPPLIERS, ...getCustomSuppliers() }; }
+function isBuiltin(id) { return id in BUILTIN_SUPPLIERS; }
+
+// ════════════════════════════════
+//  STATE
+// ════════════════════════════════
+let state = {
+  view: 'create',
+  supplierId: 'sushil',
+  supplierProfile: getSupplierProfile('sushil'),
+  showSupplierDetails: false,
+  buyerId: 'noctilucent',
+  buyerProfile: getBuyerProfile('noctilucent'),
+  inv: null,
+  addingSupplier: false,
+  newSup: blankNewSup()
+};
+
+function blankNewSup() {
+  return { name:'', business:'', address:'', defaultCurrency:'USD', defaultVatEnabled:false, defaultVatRate:0, theme:'generic', defaultUnit:'pcs' };
+}
+
+function freshInv(supplierId) {
+  const sup = getAllSuppliers()[supplierId] || BUILTIN_SUPPLIERS.sushil;
+  return {
+    number: genInvNumber(supplierId), date: today(), dueDate: '',
+    currency: sup.defaultCurrency, vatEnabled: sup.defaultVatEnabled, vatRate: sup.defaultVatRate,
+    showConversion: false, convRate: '', convCurrency: 'GBP',
+    items: [{ desc:'', qty:1, unit: sup.defaultUnit||'pcs', rate:'' }], notes: ''
+  };
+}
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function genInvNumber(supplierId) {
+  let prefix;
+  if (supplierId === 'sushil') prefix = 'TEA';
+  else if (supplierId === 'roadmap') prefix = 'TRN';
+  else {
+    const sup = getAllSuppliers()[supplierId];
+    prefix = (sup?.name||supplierId).replace(/[^A-Za-z]/g,'').slice(0,3).toUpperCase() || 'INV';
+  }
+  const d = new Date();
+  const ym = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}`;
+  const count = getHistory().filter(r => r.supplierId === supplierId).length + 1;
+  return `${prefix}-${ym}-${String(count).padStart(3,'0')}`;
+}
+
+// ════════════════════════════════
+//  CALCULATIONS
+// ════════════════════════════════
+function calcSubtotal() {
+  return state.inv.items.reduce((s,it) => s + (parseFloat(it.qty)||0)*(parseFloat(it.rate)||0), 0);
+}
+function calcVat() {
+  return state.inv.vatEnabled ? calcSubtotal() * (parseFloat(state.inv.vatRate)||0) / 100 : 0;
+}
+function calcTotal() { return calcSubtotal() + calcVat(); }
+function calcConvTotal() {
+  const r = parseFloat(state.inv.convRate)||0;
+  return r > 0 ? calcTotal()/r : 0;
+}
+
+function fmt(n, currency) {
+  const sym = { GBP:'£', USD:'$', EUR:'€' };
+  return `${currency} ${sym[currency]||''}${Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+}
+function fmtNum(n) {
+  return Number(n).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtDate(d) {
+  if (!d) return '';
+  const p = d.split('-'); if (p.length!==3) return d;
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${p[2]} ${mo[parseInt(p[1])-1]} ${p[0]}`;
+}
+
+function getSupFull() {
+  const sup = getAllSuppliers()[state.supplierId] || BUILTIN_SUPPLIERS.sushil;
+  const sp = state.supplierProfile;
+  return {
+    ...sup,
+    displayAddress: sp.address || sup.address,
+    phone: sp.phone, email: sp.email,
+    bankName: sp.bankName, accountName: sp.accountName,
+    accountNumber: sp.accountNumber, swiftIban: sp.swiftIban, bankRef: sp.bankRef
+  };
+}
+
+function getBuyer() {
+  if (state.buyerId === 'custom') return state.buyerProfile;
+  const base = BUYERS_DEFAULT.find(b => b.id === state.buyerId) || {};
+  return { name: base.name, ...state.buyerProfile };
+}
+
+// ════════════════════════════════
+//  RENDER
+// ════════════════════════════════
+function render() { document.getElementById('app').innerHTML = buildApp(); }
+
+function buildApp() {
+  return `
+    <div class="app-header">
+      <h1>&#x1F4CB; Invoice Generator</h1>
+      <div class="nav-btns">
+        <button class="nav-btn ${state.view==='create'?'active':''}" onclick="switchView('create')">+ New Invoice</button>
+        <button class="nav-btn ${state.view==='history'?'active':''}" onclick="switchView('history')">&#x1F4C2; History</button>
+      </div>
+    </div>
+    ${state.view === 'create' ? buildCreateView() : buildHistoryView()}
+  `;
+}
+
+function buildCreateView() {
+  const sup = getAllSuppliers()[state.supplierId] || BUILTIN_SUPPLIERS.sushil;
+  return `
+    <div class="main">
+      <div class="form-panel">${buildForm()}</div>
+      <div class="preview-panel">
+        <div class="invoice-paper theme-${sup.theme}" id="invoice-preview">
+          ${buildInvoiceHTML()}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════
+//  FORM
+// ════════════════════════════════
+function buildForm() {
+  const inv = state.inv;
+  const bp = state.buyerProfile;
+  const sp = state.supplierProfile;
+
+  return `
+    <!-- SUPPLIER -->
+    <div class="form-section">
+      <h3>Supplier</h3>
+      <div class="supplier-select-row">
+        <select onchange="changeSupplier(this.value)">
+          <optgroup label="Built-in">
+            ${Object.values(BUILTIN_SUPPLIERS).map(s =>
+              `<option value="${s.id}" ${s.id===state.supplierId?'selected':''}>${s.name}</option>`
+            ).join('')}
+          </optgroup>
+          ${Object.keys(getCustomSuppliers()).length ? `
+            <optgroup label="Custom">
+              ${Object.values(getCustomSuppliers()).map(s =>
+                `<option value="${s.id}" ${s.id===state.supplierId?'selected':''}>${s.name}</option>`
+              ).join('')}
+            </optgroup>` : ''}
+        </select>
+        ${!isBuiltin(state.supplierId) ? `<button class="btn-icon del" title="Delete supplier" onclick="confirmDeleteSupplier('${state.supplierId}')">🗑️</button>` : ''}
+        <button class="btn-icon add" onclick="toggleNewSupplierForm()">${state.addingSupplier ? '✕ Cancel' : '＋ New'}</button>
+      </div>
+      ${state.addingSupplier ? buildNewSupplierForm() : ''}
+
+      <button class="sup-details-toggle" onclick="toggleSupplierDetails()">
+        ${state.showSupplierDetails ? '▾ Hide supplier details' : '▸ Add / edit supplier details (address, bank, phone)'}
+      </button>
+      ${state.showSupplierDetails ? `
+        <div class="sup-details-card">
+          <h4>Supplier Details — shown on invoice</h4>
+          <div class="form-field">
+            <label>Full Address</label>
+            <textarea rows="2" oninput="state.supplierProfile.address=this.value;saveSupProfileNow();refreshPreview()">${esc(sp.address)}</textarea>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>Phone</label>
+              <input type="text" value="${esc(sp.phone)}" placeholder="+977..."
+                oninput="state.supplierProfile.phone=this.value;saveSupProfileNow();refreshPreview()">
+            </div>
+            <div>
+              <label>Email</label>
+              <input type="email" value="${esc(sp.email)}" placeholder="supplier@email.com"
+                oninput="state.supplierProfile.email=this.value;saveSupProfileNow();refreshPreview()">
+            </div>
+          </div>
+          <div class="form-field">
+            <label>Bank Name</label>
+            <input type="text" value="${esc(sp.bankName)}" placeholder="e.g. Nepal Investment Bank"
+              oninput="state.supplierProfile.bankName=this.value;saveSupProfileNow();refreshPreview()">
+          </div>
+          <div class="form-row">
+            <div>
+              <label>Account Name</label>
+              <input type="text" value="${esc(sp.accountName)}"
+                oninput="state.supplierProfile.accountName=this.value;saveSupProfileNow();refreshPreview()">
+            </div>
+            <div>
+              <label>Account Number</label>
+              <input type="text" value="${esc(sp.accountNumber)}"
+                oninput="state.supplierProfile.accountNumber=this.value;saveSupProfileNow();refreshPreview()">
+            </div>
+          </div>
+          <div class="form-row">
+            <div>
+              <label>SWIFT / IBAN / Sort Code</label>
+              <input type="text" value="${esc(sp.swiftIban)}" placeholder="e.g. NIBLNPKT"
+                oninput="state.supplierProfile.swiftIban=this.value;saveSupProfileNow();refreshPreview()">
+            </div>
+            <div>
+              <label>Reference (optional)</label>
+              <input type="text" value="${esc(sp.bankRef)}" placeholder="e.g. your name"
+                oninput="state.supplierProfile.bankRef=this.value;saveSupProfileNow();refreshPreview()">
+            </div>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+
+    <!-- BUYER -->
+    <div class="form-section">
+      <h3>Buyer (Your Company)</h3>
+      <div class="form-field">
+        <label>Select Buyer</label>
+        <select onchange="changeBuyer(this.value)">
+          ${BUYERS_DEFAULT.map(b =>
+            `<option value="${b.id}" ${b.id===state.buyerId?'selected':''}>${b.name}</option>`
+          ).join('')}
+          <option value="custom" ${state.buyerId==='custom'?'selected':''}>Custom...</option>
+        </select>
+      </div>
+      ${state.buyerId === 'custom' ? `
+        <div class="form-field">
+          <label>Company / Name</label>
+          <input type="text" value="${esc(bp.name||'')}" oninput="state.buyerProfile.name=this.value;refreshPreview()">
+        </div>
+      ` : ''}
+      <div class="form-field">
+        <label>Registered Address</label>
+        <textarea rows="2" oninput="state.buyerProfile.address=this.value;saveBuyerProfileNow();refreshPreview()">${esc(bp.address||'')}</textarea>
+        <div class="field-hint">Required for valid HMRC invoices</div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>VAT Registration No.</label>
+          <input type="text" value="${esc(bp.vatNo||'')}" placeholder="GB123456789"
+            oninput="state.buyerProfile.vatNo=this.value;saveBuyerProfileNow();refreshPreview()">
+        </div>
+        <div>
+          <label>Company No. (optional)</label>
+          <input type="text" value="${esc(bp.companyNo||'')}" placeholder="12345678"
+            oninput="state.buyerProfile.companyNo=this.value;saveBuyerProfileNow();refreshPreview()">
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Email (optional)</label>
+          <input type="email" value="${esc(bp.email||'')}"
+            oninput="state.buyerProfile.email=this.value;saveBuyerProfileNow();refreshPreview()">
+        </div>
+        <div>
+          <label>Phone (optional)</label>
+          <input type="text" value="${esc(bp.phone||'')}"
+            oninput="state.buyerProfile.phone=this.value;saveBuyerProfileNow();refreshPreview()">
+        </div>
+      </div>
+    </div>
+
+    <!-- INVOICE DETAILS -->
+    <div class="form-section">
+      <h3>Invoice Details</h3>
+      <div class="form-row">
+        <div>
+          <label>Invoice No.</label>
+          <input type="text" value="${esc(inv.number)}" oninput="state.inv.number=this.value;refreshPreview()">
+        </div>
+        <div>
+          <label>Currency</label>
+          <select onchange="state.inv.currency=this.value;refreshPreview()">
+            ${CURRENCIES.map(c => `<option ${c===inv.currency?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Invoice Date</label>
+          <input type="date" value="${inv.date}" oninput="state.inv.date=this.value;refreshPreview()">
+        </div>
+        <div>
+          <label>Due Date (optional)</label>
+          <input type="date" value="${inv.dueDate}" oninput="state.inv.dueDate=this.value;refreshPreview()">
+        </div>
+      </div>
+    </div>
+
+    <!-- LINE ITEMS -->
+    <div class="form-section">
+      <h3>Line Items</h3>
+      <div class="items-header">
+        <span>Description</span><span>Qty</span><span>Unit</span><span>Rate</span><span></span>
+      </div>
+      ${inv.items.map((item,i) => `
+        <div class="item-row">
+          <input type="text" value="${esc(item.desc)}" placeholder="e.g. Darjeeling Tea"
+            oninput="state.inv.items[${i}].desc=this.value;refreshPreview()">
+          <input type="number" value="${item.qty}" min="0.001" step="any"
+            oninput="state.inv.items[${i}].qty=this.value;refreshPreview()">
+          <select onchange="state.inv.items[${i}].unit=this.value;refreshPreview()">
+            ${UNITS.map(u => `<option ${u===item.unit?'selected':''}>${u}</option>`).join('')}
+          </select>
+          <input type="number" value="${item.rate}" min="0" step="any" placeholder="0.00"
+            oninput="state.inv.items[${i}].rate=this.value;refreshPreview()">
+          <button class="remove-btn" onclick="removeItem(${i})">×</button>
+        </div>
+      `).join('')}
+      <button class="add-item-btn" onclick="addItem()">+ Add Line Item</button>
+    </div>
+
+    <!-- VAT -->
+    <div class="form-section">
+      <h3>VAT / Tax</h3>
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" ${inv.vatEnabled?'checked':''} onchange="state.inv.vatEnabled=this.checked;refreshPreview()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Apply VAT / Tax</span>
+      </div>
+      ${inv.vatEnabled
+        ? `<div class="form-field"><label>Rate (%)</label>
+           <input type="number" value="${inv.vatRate}" min="0" max="100" step="0.1"
+             oninput="state.inv.vatRate=this.value;refreshPreview()"></div>`
+        : `<p class="sub-note">VAT exempt — will show "Exempt" on invoice</p>`}
+    </div>
+
+    <!-- GBP REPORTING -->
+    <div class="form-section">
+      <h3>GBP Reporting</h3>
+      <div class="toggle-row">
+        <label class="toggle">
+          <input type="checkbox" ${inv.showConversion?'checked':''} onchange="state.inv.showConversion=this.checked;render()">
+          <span class="toggle-slider"></span>
+        </label>
+        <span class="toggle-label">Show GBP equivalent on invoice</span>
+      </div>
+      ${inv.showConversion ? `
+        <div class="form-field">
+          <label>Reporting currency</label>
+          <select onchange="state.inv.convCurrency=this.value;refreshPreview()">
+            ${CURRENCIES.map(c => `<option ${c===inv.convCurrency?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+        <div class="conv-rate-row">
+          <span class="conv-rate-label">1 ${inv.convCurrency} =</span>
+          <input type="number" value="${inv.convRate}" min="0" step="any" placeholder="e.g. 142.50"
+            oninput="state.inv.convRate=this.value;refreshPreview()">
+          <span class="conv-rate-label">${inv.currency}</span>
+        </div>
+        <p class="sub-note">Wise / bank rate. A reporting summary block appears on the invoice.</p>
+        ${inv.convRate ? `<p class="sub-note" style="color:#8b6b47;font-style:normal;font-weight:600">→ Total in ${inv.convCurrency}: ${fmt(calcConvTotal(), inv.convCurrency)}</p>` : ''}
+      ` : ''}
+    </div>
+
+    <!-- NOTES -->
+    <div class="form-section">
+      <h3>Notes / Additional Info</h3>
+      <div class="form-field">
+        <textarea rows="3" placeholder="Additional notes, references…"
+          oninput="state.inv.notes=this.value;refreshPreview()">${esc(inv.notes)}</textarea>
+      </div>
+    </div>
+
+    <div class="action-row">
+      <button class="btn-primary" onclick="saveAndPrint()">&#x1F5A8; Save &amp; Print / PDF</button>
+      <button class="btn-secondary" onclick="doSave()">&#x1F4BE; Save</button>
+    </div>
+  `;
+}
+
+function buildNewSupplierForm() {
+  const ns = state.newSup;
+  return `
+    <div class="new-sup-card">
+      <h4>＋ Create New Supplier</h4>
+      <div class="form-field">
+        <label>Supplier Name *</label>
+        <input type="text" value="${esc(ns.name)}" placeholder="e.g. Golden Spice Co."
+          oninput="state.newSup.name=this.value">
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Business Type</label>
+          <input type="text" value="${esc(ns.business)}" placeholder="e.g. Spice Supplier"
+            oninput="state.newSup.business=this.value">
+        </div>
+        <div>
+          <label>Currency</label>
+          <select onchange="state.newSup.defaultCurrency=this.value">
+            ${CURRENCIES.map(c => `<option ${c===ns.defaultCurrency?'selected':''}>${c}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-field">
+        <label>Address / Country</label>
+        <input type="text" value="${esc(ns.address)}" placeholder="e.g. Bangkok, Thailand"
+          oninput="state.newSup.address=this.value">
+      </div>
+      <div class="form-row">
+        <div>
+          <label>Default VAT %</label>
+          <input type="number" value="${ns.defaultVatRate}" min="0" max="100" step="0.1"
+            oninput="state.newSup.defaultVatRate=parseFloat(this.value)||0">
+        </div>
+        <div>
+          <label>Default Unit</label>
+          <select onchange="state.newSup.defaultUnit=this.value">
+            ${UNITS.map(u => `<option ${u===ns.defaultUnit?'selected':''}>${u}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <label style="margin-bottom:8px">Invoice Style</label>
+      <div class="theme-picker">
+        <div class="theme-opt ${ns.theme==='tea'?'selected':''}" onclick="state.newSup.theme='tea';render()">
+          <div class="swatch swatch-tea"></div>Tea / Natural
+        </div>
+        <div class="theme-opt ${ns.theme==='transport'?'selected':''}" onclick="state.newSup.theme='transport';render()">
+          <div class="swatch swatch-transport"></div>Transport / Pro
+        </div>
+        <div class="theme-opt ${ns.theme==='generic'?'selected':''}" onclick="state.newSup.theme='generic';render()">
+          <div class="swatch swatch-generic"></div>General Purpose
+        </div>
+      </div>
+      <div class="new-sup-actions">
+        <button class="btn-sm-primary" onclick="createSupplier()">Create Supplier</button>
+        <button class="btn-sm-secondary" onclick="toggleNewSupplierForm()">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+// ════════════════════════════════
+//  INVOICE HTML BUILDERS
+// ════════════════════════════════
+function buildInvoiceHTML() {
+  const sup = getSupFull();
+  if (sup.theme === 'tea') return buildTeaInvoice(sup);
+  if (sup.theme === 'transport') return buildTransportInvoice(sup);
+  return buildGenericInvoice(sup);
+}
+
+function supplierMetaHTML(sup) {
+  const lines = [];
+  if (sup.displayAddress) lines.push(esc(sup.displayAddress).replace(/\n/g,'<br>'));
+  if (sup.phone) lines.push(esc(sup.phone));
+  if (sup.email) lines.push(esc(sup.email));
+  return lines.join('<br>');
+}
+
+function buyerDetailLines() {
+  const bp = state.buyerProfile;
+  const lines = [];
+  if (bp.address) lines.push(esc(bp.address).replace(/\n/g,'<br>'));
+  if (bp.vatNo) lines.push(`VAT Reg No: <strong>${esc(bp.vatNo)}</strong>`);
+  if (bp.companyNo) lines.push(`Company No: ${esc(bp.companyNo)}`);
+  if (bp.email) lines.push(esc(bp.email));
+  if (bp.phone) lines.push(esc(bp.phone));
+  return lines.join('<br>');
+}
+
+function bankBoxHTML(sup) {
+  if (!sup.bankName && !sup.accountName && !sup.accountNumber && !sup.swiftIban) return '';
+  const rows = [];
+  if (sup.bankName) rows.push(['Bank', sup.bankName]);
+  if (sup.accountName) rows.push(['Account Name', sup.accountName]);
+  if (sup.accountNumber) rows.push(['Account No.', sup.accountNumber]);
+  if (sup.swiftIban) rows.push(['SWIFT / IBAN', sup.swiftIban]);
+  if (sup.bankRef) rows.push(['Reference', sup.bankRef]);
+  return `
+    <div class="inv-bank-box">
+      <div class="inv-bank-hdr">Supplier Payment Details</div>
+      <div class="inv-bank-body">
+        ${rows.map(([lbl,val]) => `
+          <div>
+            <div class="inv-bank-label">${lbl}</div>
+            <div class="inv-bank-value">${esc(val)}</div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function itemsTableHTML(inv) {
+  return `
+    <table class="inv-table">
+      <thead><tr>
+        <th>Description</th>
+        <th class="num">Qty</th>
+        <th>Unit</th>
+        <th class="num">Rate (${esc(inv.currency)})</th>
+        <th class="num">Amount (${esc(inv.currency)})</th>
+      </tr></thead>
+      <tbody>
+        ${inv.items.map(item => `
+          <tr>
+            <td>${esc(item.desc)||'<span style="color:#ccc">—</span>'}</td>
+            <td class="num">${parseFloat(item.qty)||0}</td>
+            <td>${item.unit}</td>
+            <td class="num">${fmtNum(parseFloat(item.rate)||0)}</td>
+            <td class="num">${fmtNum((parseFloat(item.qty)||0)*(parseFloat(item.rate)||0))}</td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function totalsBoxHTML(inv) {
+  const sub=calcSubtotal(), vat=calcVat(), total=calcTotal();
+  return `
+    <div class="totals-row"><span>Subtotal</span><span>${fmt(sub,inv.currency)}</span></div>
+    ${inv.vatEnabled
+      ? `<div class="totals-row"><span>VAT (${parseFloat(inv.vatRate)||0}%)</span><span>${fmt(vat,inv.currency)}</span></div>`
+      : `<div class="totals-row"><span>VAT (0%)</span><span>${fmt(0,inv.currency)}</span></div>`}
+    <div class="totals-row grand"><span>TOTAL</span><span>${fmt(total,inv.currency)}</span></div>`;
+}
+
+function convBlockHTML(inv) {
+  if (!inv.showConversion || !inv.convRate) return '';
+  const total=calcTotal(), convTotal=calcConvTotal(), rate=parseFloat(inv.convRate);
+  return `
+    <div class="inv-conv-block">
+      <div class="conv-hdr">&#x1F4B7; ${inv.convCurrency} Reporting Summary</div>
+      <div class="conv-row"><span>Amount paid (${inv.currency})</span><span>${fmt(total,inv.currency)}</span></div>
+      <div class="conv-row"><span>Exchange rate</span><span>1 ${inv.convCurrency} = ${rate.toLocaleString('en-GB')} ${inv.currency}</span></div>
+      <div class="conv-row conv-grand"><span>Total in ${inv.convCurrency}</span><span>${fmt(convTotal,inv.convCurrency)}</span></div>
+    </div>`;
+}
+
+function buildTeaInvoice(sup) {
+  const inv = state.inv; const buyer = getBuyer();
+  return `
+    <div class="inv-header">
+      <div>
+        <div class="inv-supplier-name">${esc(sup.name)}</div>
+        <div class="inv-supplier-sub">${esc(sup.business)}</div>
+        <div class="inv-supplier-meta">${supplierMetaHTML(sup)}</div>
+      </div>
+      <div class="inv-title-block">
+        <div class="inv-main-title">INVOICE</div>
+        <div class="inv-number">${esc(inv.number)||'—'}</div>
+        <div class="inv-dates">Date: ${fmtDate(inv.date)}${inv.dueDate?`<br>Due: ${fmtDate(inv.dueDate)}`:''}</div>
+      </div>
+    </div>
+    <div class="inv-parties">
+      <div>
+        <div class="inv-party-label">Supplier</div>
+        <div class="inv-party-name">${esc(sup.name)}</div>
+        <div class="inv-party-detail">${supplierMetaHTML(sup)||esc(sup.address)}</div>
+      </div>
+      <div>
+        <div class="inv-party-label">Buyer</div>
+        <div class="inv-party-name">${esc(buyer.name||'')}</div>
+        <div class="inv-party-detail">${buyerDetailLines()}</div>
+      </div>
+    </div>
+    ${itemsTableHTML(inv)}
+    <div class="inv-totals"><div class="inv-totals-box">${totalsBoxHTML(inv)}</div></div>
+    ${convBlockHTML(inv)}
+    ${bankBoxHTML(sup)}
+    ${inv.notes ? `<div class="inv-notes">${esc(inv.notes).replace(/\n/g,'<br>')}</div>` : ''}
+  `;
+}
+
+function buildTransportInvoice(sup) {
+  const inv = state.inv; const buyer = getBuyer();
+  return `
+    <div class="inv-header">
+      <div class="inv-header-inner">
+        <div>
+          <div class="inv-supplier-name">${esc(sup.name)}</div>
+          <div class="inv-supplier-sub">${esc(sup.business)}</div>
+          <div class="inv-supplier-meta">${supplierMetaHTML(sup)}</div>
+        </div>
+        <div class="inv-header-right">
+          <div class="inv-main-title">INVOICE</div>
+          <div class="inv-number">No: ${esc(inv.number)||'—'}</div>
+          <div class="inv-dates">Date: ${fmtDate(inv.date)}${inv.dueDate?`<br>Due: ${fmtDate(inv.dueDate)}`:''}</div>
+        </div>
+      </div>
+    </div>
+    <div class="inv-accent"></div>
+    <div class="inv-body">
+      <div class="inv-parties">
+        <div>
+          <div class="inv-party-label">Supplier</div>
+          <div class="inv-party-name">${esc(sup.name)}</div>
+          <div class="inv-party-detail">${supplierMetaHTML(sup)||esc(sup.address)}</div>
+        </div>
+        <div>
+          <div class="inv-party-label">Buyer</div>
+          <div class="inv-party-name">${esc(buyer.name||'')}</div>
+          <div class="inv-party-detail">${buyerDetailLines()}</div>
+        </div>
+      </div>
+      ${itemsTableHTML(inv)}
+      <div class="inv-totals"><div class="inv-totals-box">${totalsBoxHTML(inv)}</div></div>
+      ${convBlockHTML(inv)}
+      ${bankBoxHTML(sup)}
+      ${inv.notes ? `<div class="inv-notes">${esc(inv.notes).replace(/\n/g,'<br>')}</div>` : ''}
+    </div>
+  `;
+}
+
+function buildGenericInvoice(sup) {
+  const inv = state.inv; const buyer = getBuyer();
+  return `
+    <div class="inv-header">
+      <div>
+        <div class="inv-supplier-name">${esc(sup.name)}</div>
+        <div class="inv-supplier-sub">${esc(sup.business)}</div>
+        <div class="inv-supplier-meta">${supplierMetaHTML(sup)}</div>
+      </div>
+      <div class="inv-title-block">
+        <div class="inv-main-title">INVOICE</div>
+        <div class="inv-number">No: ${esc(inv.number)||'—'}</div>
+        <div class="inv-dates">Date: ${fmtDate(inv.date)}${inv.dueDate?`<br>Due: ${fmtDate(inv.dueDate)}`:''}</div>
+      </div>
+    </div>
+    <div class="inv-accent"></div>
+    <div class="inv-body">
+      <div class="inv-parties">
+        <div>
+          <div class="inv-party-label">Supplier</div>
+          <div class="inv-party-name">${esc(sup.name)}</div>
+          <div class="inv-party-detail">${supplierMetaHTML(sup)||esc(sup.address)}</div>
+        </div>
+        <div>
+          <div class="inv-party-label">Buyer</div>
+          <div class="inv-party-name">${esc(buyer.name||'')}</div>
+          <div class="inv-party-detail">${buyerDetailLines()}</div>
+        </div>
+      </div>
+      ${itemsTableHTML(inv)}
+      <div class="inv-totals"><div class="inv-totals-box">${totalsBoxHTML(inv)}</div></div>
+      ${convBlockHTML(inv)}
+      ${bankBoxHTML(sup)}
+      ${inv.notes ? `<div class="inv-notes">${esc(inv.notes).replace(/\n/g,'<br>')}</div>` : ''}
+    </div>
+  `;
+}
+
+// ════════════════════════════════
+//  HISTORY
+// ════════════════════════════════
+function buildHistoryView() {
+  const records = getHistory();
+  const allSup = getAllSuppliers();
+  return `
+    <div class="history-view">
+      <h2>Invoice History (${records.length})</h2>
+      ${records.length === 0
+        ? `<div class="empty-state">No invoices saved yet.<br>Create your first invoice and click Save.</div>`
+        : `<div class="history-card">
+            <table class="history-table">
+              <thead><tr>
+                <th>Invoice No.</th><th>Date</th><th>Supplier</th><th>Buyer</th>
+                <th>Total</th><th>GBP Equiv.</th><th>Actions</th>
+              </tr></thead>
+              <tbody>
+                ${[...records].reverse().map(r => {
+                  const sup = allSup[r.supplierId];
+                  const theme = sup?.theme||'generic';
+                  return `<tr>
+                    <td><strong>${esc(r.inv.number)}</strong></td>
+                    <td>${fmtDate(r.inv.date)}</td>
+                    <td><span class="badge badge-${theme}">${esc(sup?.name||r.supplierId)}</span></td>
+                    <td>${esc(r.buyerName)}</td>
+                    <td><strong>${fmt(r.total,r.inv.currency)}</strong></td>
+                    <td style="color:#8b6b47;font-size:0.8rem">${r.convTotal ? fmt(r.convTotal,r.inv.convCurrency||'GBP') : '—'}</td>
+                    <td style="white-space:nowrap">
+                      <button class="icon-btn" title="Clone as new invoice" onclick="cloneInvoice(${r.id})">📋</button>
+                      <button class="icon-btn" title="Load &amp; Edit" onclick="loadInvoice(${r.id})">✏️</button>
+                      <button class="icon-btn" title="Delete" onclick="deleteInvoice(${r.id})">🗑️</button>
+                    </td>
+                  </tr>`;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>`}
+    </div>`;
+}
+
+// ════════════════════════════════
+//  LOCALSTORAGE
+// ════════════════════════════════
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('invoices_v1')||'[]'); } catch { return []; }
+}
+
+function doSave() {
+  const records = getHistory();
+  const buyer = getBuyer();
+  const existing = records.findIndex(r => r.inv.number === state.inv.number && r.supplierId === state.supplierId);
+  const record = {
+    id: existing >= 0 ? records[existing].id : Date.now(),
+    supplierId: state.supplierId, buyerId: state.buyerId,
+    buyerName: buyer.name||'',
+    inv: { ...state.inv, items: state.inv.items.map(i=>({...i})) },
+    total: calcTotal(),
+    convTotal: state.inv.showConversion && state.inv.convRate ? calcConvTotal() : null,
+    savedAt: new Date().toISOString()
+  };
+  if (existing >= 0) records[existing] = record; else records.push(record);
+  localStorage.setItem('invoices_v1', JSON.stringify(records));
+  toast('Invoice saved ✓');
+}
+
+function saveAndPrint() { doSave(); setTimeout(() => window.print(), 200); }
+
+function loadInvoice(id) {
+  const r = getHistory().find(r => r.id === id);
+  if (!r) return;
+  state.supplierId = r.supplierId;
+  state.supplierProfile = getSupplierProfile(r.supplierId);
+  state.buyerId = r.buyerId;
+  state.buyerProfile = getBuyerProfile(r.buyerId);
+  state.inv = { ...r.inv, items: r.inv.items.map(i=>({...i})) };
+  state.view = 'create';
+  state.addingSupplier = false;
+  render();
+  toast('Invoice loaded for editing');
+}
+
+function cloneInvoice(id) {
+  const r = getHistory().find(r => r.id === id);
+  if (!r) return;
+  state.supplierId = r.supplierId;
+  state.supplierProfile = getSupplierProfile(r.supplierId);
+  state.buyerId = r.buyerId;
+  state.buyerProfile = getBuyerProfile(r.buyerId);
+  state.inv = {
+    ...r.inv,
+    items: r.inv.items.map(i=>({...i})),
+    number: genInvNumber(r.supplierId),
+    date: today(),
+    dueDate: ''
+  };
+  state.view = 'create';
+  state.addingSupplier = false;
+  render();
+  toast('Cloned — adjust quantities and save as new invoice');
+}
+
+function deleteInvoice(id) {
+  if (!confirm('Delete this invoice? This cannot be undone.')) return;
+  localStorage.setItem('invoices_v1', JSON.stringify(getHistory().filter(r=>r.id!==id)));
+  render();
+}
+
+function saveSupProfileNow() { saveSupplierProfile(state.supplierId, state.supplierProfile); }
+function saveBuyerProfileNow() { saveBuyerProfile(state.buyerId, state.buyerProfile); }
+
+// ════════════════════════════════
+//  EVENT HANDLERS
+// ════════════════════════════════
+function switchView(v) { state.view = v; render(); }
+
+function changeSupplier(id) {
+  state.supplierId = id;
+  state.supplierProfile = getSupplierProfile(id);
+  state.inv = freshInv(id);
+  render();
+}
+
+function changeBuyer(id) {
+  state.buyerId = id;
+  state.buyerProfile = getBuyerProfile(id);
+  render();
+}
+
+function addItem() {
+  const sup = getAllSuppliers()[state.supplierId];
+  state.inv.items.push({ desc:'', qty:1, unit: sup?.defaultUnit||'pcs', rate:'' });
+  render();
+}
+
+function removeItem(i) {
+  if (state.inv.items.length <= 1) return;
+  state.inv.items.splice(i, 1);
+  render();
+}
+
+function refreshPreview() {
+  const sup = getAllSuppliers()[state.supplierId]||BUILTIN_SUPPLIERS.sushil;
+  const el = document.getElementById('invoice-preview');
+  if (!el) return;
+  el.className = `invoice-paper theme-${sup.theme}`;
+  el.innerHTML = buildInvoiceHTML();
+}
+
+function toggleNewSupplierForm() {
+  state.addingSupplier = !state.addingSupplier;
+  if (state.addingSupplier) state.newSup = blankNewSup();
+  render();
+}
+
+function toggleSupplierDetails() {
+  state.showSupplierDetails = !state.showSupplierDetails;
+  render();
+}
+
+function createSupplier() {
+  const ns = state.newSup;
+  if (!ns.name.trim()) { toast('Please enter a supplier name.'); return; }
+  const id = 'custom_' + ns.name.toLowerCase().replace(/[^a-z0-9]/g,'_') + '_' + Date.now();
+  const sup = {
+    id, name: ns.name.trim(), business: ns.business.trim(), address: ns.address.trim(),
+    theme: ns.theme, defaultCurrency: ns.defaultCurrency, defaultVatEnabled: false,
+    defaultVatRate: parseFloat(ns.defaultVatRate)||0, defaultUnit: ns.defaultUnit
+  };
+  saveCustomSupplier(sup);
+  state.supplierId = id;
+  state.supplierProfile = blankSupProfile();
+  state.inv = freshInv(id);
+  state.addingSupplier = false;
+  render();
+  toast(`Supplier "${sup.name}" created ✓`);
+}
+
+function confirmDeleteSupplier(id) {
+  const sup = getAllSuppliers()[id];
+  if (!sup || !confirm(`Delete supplier "${sup.name}"?`)) return;
+  deleteCustomSupplier(id);
+  state.supplierId = 'sushil';
+  state.supplierProfile = getSupplierProfile('sushil');
+  state.inv = freshInv('sushil');
+  render();
+  toast('Supplier deleted');
+}
+
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2800);
+}
+
+state.inv = freshInv(state.supplierId);
+render();
+</script>
+</body>
+</html>
